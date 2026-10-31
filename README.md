@@ -138,6 +138,7 @@ Setelah suite browser selesai, jalankan `node tests/laragon-routing.js` untuk me
 - `docs/PEMETAAN_LEGACY.md`: form, handler, sumber tarif, pemetaan field, dan rumus yang ditelusuri dari EXE.
 - `docs/VERIFIKASI.md`: hasil pemeriksaan dan keterbatasan.
 - `docs/AUDIT_PENGGAJIAN.md`: temuan audit angka, aturan versi baru, pelestarian histori, serta batas kebijakan.
+- `docs/PERAPIHAN_TAMPILAN.md`: filter dan Reset, input tahun, tata letak slip, serta pengujian tampilan/PDF sintetis.
 - `storage/legacy/reconciliation.json`: hasil rekonsiliasi terstruktur.
 
 EXE tidak dieksekusi pada lingkungan Windows 7. Kesetaraan perhitungan dibuktikan melalui handler native dan data transaksi tersimpan; ini bukan klaim bahwa seluruh interaksi EXE telah dijalankan. Template `.rpt` tidak tersedia, sehingga laporan dibangun ulang dari data dan dokumentasi visual; kesamaan persis tata letak/pengelompokan Crystal Reports lama belum dapat dibuktikan.

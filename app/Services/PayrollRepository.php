@@ -18,6 +18,15 @@ final class PayrollRepository {
         return ['bulan'=>$month,'tahun'=>$year,'bagian'=>$department];
     }
     public function departments(): array { return Database::connection()->query('SELECT * FROM bagian ORDER BY kd_bagian')->fetchAll(); }
+    /** Suggestions only: any valid year may still be entered directly. */
+    public function years(array $selected = []): array {
+        $years = Database::connection()->query("SELECT DISTINCT CAST(tahun AS UNSIGNED) FROM penghasilan WHERE tahun REGEXP '^[0-9]{4}$' AND CAST(tahun AS UNSIGNED) BETWEEN 1900 AND 9999")->fetchAll(\PDO::FETCH_COLUMN);
+        foreach ([(int)date('Y'), ...$selected] as $year) {
+            if ((is_int($year) || is_string($year)) && ctype_digit((string)$year) && (int)$year >= 1900 && (int)$year <= 9999) $years[] = (int)$year;
+        }
+        $years = array_values(array_unique(array_map('intval', $years))); rsort($years, SORT_NUMERIC);
+        return $years;
+    }
     public function find(int $id,bool $forUpdate=false): array|false {
         $code=self::departmentCodeSql();$name=self::employeeNameSql();$department=self::departmentNameSql();
         $q=Database::connection()->prepare("SELECT p.*,$name AS nama,$code AS kd_bagian,$department AS nama_bagian FROM penghasilan p LEFT JOIN karyawan k ON k.nip=p.nip LEFT JOIN bagian b ON b.kd_bagian=$code WHERE p.id=?".($forUpdate?' FOR UPDATE':''));$q->execute([$id]);return $q->fetch();

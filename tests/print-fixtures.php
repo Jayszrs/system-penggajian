@@ -23,6 +23,7 @@ try {
     $employee=$db->prepare('INSERT INTO karyawan(nip,nama,kd_bagian) VALUES(?,?,?)');
     $employee->execute(['000000000000001',$longName,'PA001']);
     $employee->execute(['000000000000002','Karyawan Pengujian Kedua','PB001']);
+    $employee->execute(['000000000000003','Karyawan Contoh','PA001']);
     $insert=function(string $nip,string $name,string $department,int $month,int $year,array $values) use($db): array {
         $numbers=array_fill_keys(array_keys(App\Domain\PayrollFields::numeric()),'0');
         $numbers=array_replace($numbers,$values);
@@ -34,13 +35,14 @@ try {
         $db->prepare("INSERT INTO penghasilan (`$columns`) VALUES($parameters)")->execute(array_values($record));
         return ['id'=>(int)$db->lastInsertId(),'name'=>$name,'nip'=>$nip,'numbers'=>$numbers];
     };
-    $first=$insert('000000000000001',$longName,'PA001',10,2026,['gapok'=>'900000000000000000','t_jabatan'=>'250000','lain1'=>'23456','kelebihan'=>'7890','cash_bon'=>'-1000','p_anak'=>'5000','hefektif'=>'21','hmasuk'=>'20']);
+    $first=$insert('000000000000001',$longName,'PA001',10,2026,['gapok'=>'900000000000000000','t_jabatan'=>'250000','lain1'=>'23456','kelebihan'=>'7890','cash_bon'=>'-1000','p_anak'=>'5000','hefektif'=>'21','hmasuk'=>'20','lembur'=>'2','infal'=>'3','overtime'=>'4']);
     $second=$insert('000000000000002','Karyawan Pengujian Kedua','PB001',10,2026,['cash_bon'=>'1000','hefektif'=>'21','hmasuk'=>'0']);
+    $reference=$insert('000000000000003','Karyawan Contoh','PA001',9,2026,['gapok'=>'1500000','t_jabatan'=>'400000','t_harian'=>'1260000','t_konsumsi'=>'525000','ulembur'=>'30000','p_anak'=>'100000','pinjaman_lunak'=>'75000','pinjaman_bsm'=>'50000','hefektif'=>'21','hmasuk'=>'21','lembur'=>'2']);
     $insert('000000000000001',$longName,'PA001',12,2025,['gapok'=>'100000','hefektif'=>'20','hmasuk'=>'20']);
     for($i=0;$i<96;$i++)$insert('000000000000001',$longName,'PA001',$i%12+1,2010+intdiv($i,12),['gapok'=>'100000','hefektif'=>'20','hmasuk'=>'20']);
     $monthly=$db->query("SELECT SUM(tpenghasilan) AS tpenghasilan,SUM(tpotongan) AS tpotongan,SUM(tbersih) AS tbersih FROM penghasilan WHERE tahun='2026' AND bulan='10'")->fetch();
     $range=$db->query('SELECT SUM(tpenghasilan) AS tpenghasilan,SUM(tpotongan) AS tpotongan,SUM(tbersih) AS tbersih FROM penghasilan')->fetch();
-    echo json_encode(['first'=>$first,'second'=>$second,'officer'=>'Accounting QA Cetak','monthly_totals'=>$monthly,'range_totals'=>$range],JSON_THROW_ON_ERROR);
+    echo json_encode(['first'=>$first,'second'=>$second,'reference'=>$reference,'officer'=>'Accounting QA Cetak','monthly_totals'=>$monthly,'range_totals'=>$range],JSON_THROW_ON_ERROR);
 } catch(Throwable $error) {
     fwrite(STDERR,$error->getMessage().PHP_EOL);exit(1);
 }

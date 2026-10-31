@@ -57,6 +57,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     expect(deleted.ok()).toBeTruthy();
     await page.goto(base + '/master/bagian?q=QA999');
     await expect(page.locator('tbody')).not.toContainText('Bagian QA diubah');
+    await require('./layout-refinement')(page,base,fixture,output);
     const report = async (query, filename) => {
       await page.goto(base + '/laporan?' + new URLSearchParams({ bulan: '10', tahun: '2026', view: '1', ...query }));
       await expect(page.getByRole('button', { name: 'Cetak / Simpan PDF', exact: true })).toBeVisible();
@@ -65,6 +66,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       for (const stamp of await page.locator('[data-print-timestamp]').all()) await expect(stamp).toHaveText('31-Oct-2026, 16:30:25 WIB');
       await page.pdf({ path: path.join(output, filename + '.pdf'), preferCSSPageSize: true, printBackground: true, displayHeaderFooter: false, scale: 1 });
     };
+    await report({ type: 'slip_karyawan', nip: fixture.reference.nip, bulan:'9' }, 'reference-slip');
+    await page.screenshot({path:path.join(output,'reference-slip-screen.png'),fullPage:true});
     await report({ type: 'slip_karyawan', nip: fixture.first.nip }, 'single-slip');
     await expect(page.locator('.slip')).toHaveCount(1);
     await expect(page.locator('.legacy-slip-accounting')).toContainText(fixture.officer);
@@ -73,6 +76,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       const amount = page.locator(`[data-slip-field="${field}"]`);
       if (await amount.count()) await expect(amount).toHaveText(currency(value));
     }
+    for(const field of ['hefektif','hmasuk','lembur','infal','overtime'])await expect(page.locator(`[data-slip-quantity="${field}"]`)).toHaveText(fixture.first.numbers[field]);
     await expect(page.locator('.legacy-slip-components tbody tr:nth-child(9) td').first()).toHaveText('Tunjangan Lain');
     await expect(page.locator('.legacy-slip-components tbody tr:nth-child(10) td').first()).toHaveText('Lebih Jam Mengajar');
     await page.screenshot({ path: path.join(output, 'slip-screen.png'), fullPage: true });

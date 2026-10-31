@@ -48,6 +48,7 @@ final class ReportController extends Controller {
         $employees=$db->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll();
         $detailed=!$isSlip&&!in_array($type,['gapok','absensi'],true)&&($_GET['rincian']??'')==='1';
         $print=PrintLayout::metadata((string)$_SESSION['user']['name']);
-        $this->view('reports',['print'=>$print,'title'=>'Slip & Laporan','section'=>'Laporan','types'=>self::TYPES,'type'=>$type,'reportTitle'=>self::TYPES[$type],'period'=>$period,'isRange'=>$isRange,'isSlip'=>$isSlip,'employeeScope'=>$employeeScope,'scope'=>$scope,'nip'=>$nip,'startMonth'=>$startMonth,'startYear'=>$startYear,'endMonth'=>$endMonth,'endYear'=>$endYear,'error'=>$error,'view'=>$view,'rows'=>$rows,'totals'=>$totals,'rangeLabel'=>$rangeLabel,'departments'=>$repo->departments(),'employees'=>$employees,'detailed'=>$detailed]);
+        $yearOptions=$repo->years([$period['tahun'],$startYear,$endYear]);
+        $this->view('reports',['yearOptions'=>$yearOptions,'print'=>$print,'title'=>'Slip & Laporan','section'=>'Laporan','types'=>self::TYPES,'type'=>$type,'reportTitle'=>self::TYPES[$type],'period'=>$period,'isRange'=>$isRange,'isSlip'=>$isSlip,'employeeScope'=>$employeeScope,'scope'=>$scope,'nip'=>$nip,'startMonth'=>$startMonth,'startYear'=>$startYear,'endMonth'=>$endMonth,'endYear'=>$endYear,'error'=>$error,'view'=>$view,'rows'=>$rows,'totals'=>$totals,'rangeLabel'=>$rangeLabel,'departments'=>$repo->departments(),'employees'=>$employees,'detailed'=>$detailed]);
     }
 }

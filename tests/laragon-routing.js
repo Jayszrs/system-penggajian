@@ -151,7 +151,6 @@ async function verifySearchAndReportLayout(page, base, folder) {
   await expect(employeeSearch).toBeVisible();
   await employeeSearch.fill(employeeName);
   await expect(page.locator(`#master-nip-options [data-select-value="${employeeCode}"]`)).toBeVisible();
-  let reportControlWidth;
   for (const [type] of reportItems) {
     await page.goto(base + '/laporan?type=' + type);
     const dimensions = await page.locator('.report-filters .field').evaluateAll(fields => fields.map(field => {
@@ -160,10 +159,11 @@ async function verifySearchAndReportLayout(page, base, folder) {
       return { width: rect.width, height: rect.height };
     }));
     expect(Math.max(...dimensions.map(item => item.height)) - Math.min(...dimensions.map(item => item.height))).toBeLessThan(1);
-    expect(Math.max(...dimensions.map(item => item.width)) - Math.min(...dimensions.map(item => item.width))).toBeLessThan(1);
     for (const item of dimensions) expect(item.height).toBe(48);
-    reportControlWidth ??= dimensions[0].width;
-    expect(Math.abs(dimensions[0].width - reportControlWidth)).toBeLessThan(1);
+    const actionBounds=await page.locator('.report-actions').boundingBox();
+    const formBounds=await page.locator('.report-filters').boundingBox();
+    expect(Math.abs(actionBounds.x+actionBounds.width-(formBounds.x+formBounds.width-24))).toBeLessThan(2);
+    await expect(page.locator('.report-actions').getByRole('link',{name:'Reset',exact:true})).toBeVisible();
   }
   await page.goto(base + '/laporan?type=rekap_periode');
   const reportEmployee = page.locator('#report-employee');
@@ -210,7 +210,11 @@ async function verifySearchAndReportLayout(page, base, folder) {
     const rect = field.querySelector('input.form-control,button.select-dropdown-toggle').getBoundingClientRect();
     return { width: rect.width, height: rect.height, y: rect.y };
   }));
-  for (const item of desktopDimensions) { expect(item.height).toBe(48); expect(Math.abs(item.width - desktopDimensions[0].width)).toBeLessThan(1); expect(item.y).toBe(desktopDimensions[0].y); }
+  for (const item of desktopDimensions) { expect(item.height).toBe(48); expect(item.y).toBe(desktopDimensions[0].y); }
+  expect(desktopDimensions[3].width).toBeGreaterThan(desktopDimensions[0].width*1.8);
+  const payrollAction=await page.locator('.payroll-filters').getByRole('button',{name:'Tampilkan',exact:true}).boundingBox();
+  const payrollForm=await page.locator('.payroll-filters').boundingBox();
+  expect(payrollAction.width).toBe(260);expect(Math.abs(payrollAction.x+payrollAction.width-(payrollForm.x+payrollForm.width-23))).toBeLessThan(1);
   await page.screenshot({ path: path.join(qaPath, `payroll-filters-${folder ? 'folder' : 'root'}-1600.png`), fullPage: true });
   await page.goto(base + '/transaksi/form');
   await page.locator('#employee-nip').focus();

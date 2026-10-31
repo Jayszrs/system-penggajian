@@ -7,7 +7,7 @@ const groupInteger=value=>value.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 const inputInteger=(input,value)=>numberInputs.get(input)?.test(value)?value.replace(/\./g,''):null;
 const setNumberInputValue=(input,value)=>{const text=String(value??'');const raw=inputInteger(input,text);const formatted=raw===null?text:groupInteger(raw);if(input.value!==formatted)input.value=formatted;if(numberInputs.has(input)&&!invalidNumberPaste.has(input)&&(text===''||raw!==null))input.setCustomValidity('');};
 // Format integers as strings so 18-digit amounts never pass through floating point.
-document.querySelectorAll('input[inputmode="numeric"]').forEach(input=>{
+document.querySelectorAll('input[inputmode="numeric"]:not([data-year-control])').forEach(input=>{
  const signed=input.pattern.startsWith('-?');const sign=signed?'-?':'';
  const pattern=sign+'(?:[0-9]{1,18}|[0-9]{1,3}(?:\\.[0-9]{3}){1,5})';
  numberInputs.set(input,new RegExp('^'+pattern+'$'));input.pattern=pattern;input.maxLength=24;input.dataset.numberFormat='';
@@ -43,6 +43,12 @@ document.querySelectorAll('input[inputmode="numeric"]').forEach(input=>{
  input.addEventListener('compositionend',()=>input.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText'})));
  input.form?.addEventListener('reset',()=>setTimeout(()=>{invalidNumberPaste.delete(input);setNumberInputValue(input,input.value);validate();},0));
  setNumberInputValue(input,input.value);validate();
+});
+// Year controls remain editable and never use monetary grouping separators.
+document.querySelectorAll('[data-year-control]').forEach(input=>{
+ const validate=()=>{const value=input.value;input.setCustomValidity(value===''||(/^\d{4}$/.test(value)&&Number(value)>=1900&&Number(value)<=9999)?'':'Tahun harus berupa 4 digit antara 1900 dan 9999.');};
+ input.addEventListener('input',validate);input.addEventListener('blur',validate);
+ input.form?.addEventListener('reset',()=>setTimeout(validate,0));validate();
 });
 // Keep the visible separators while both native submissions and AJAX use raw integers.
 new Set(Array.from(numberInputs.keys(),input=>input.form).filter(Boolean)).forEach(form=>form.addEventListener('formdata',event=>{
@@ -105,7 +111,7 @@ if(window.bootstrap?.Dropdown){
    if(changed){control.dispatchEvent(new Event('input',{bubbles:true}));control.dispatchEvent(new Event('change',{bubbles:true}));}
   };
   for(const option of options){
-   const item=document.createElement('li');const button=document.createElement('button');button.type='button';button.className='dropdown-item';button.dataset.selectValue=option.value;button.textContent=editable?option.value+' · '+(option.label||option.textContent):option.textContent;button.disabled=option.disabled||Boolean(option.parentElement.disabled);
+   const item=document.createElement('li');const button=document.createElement('button');button.type='button';button.className='dropdown-item';button.dataset.selectValue=option.value;button.textContent=control.hasAttribute('data-year-control')?option.value:(editable?option.value+' · '+(option.label||option.textContent):option.textContent);button.disabled=option.disabled||Boolean(option.parentElement.disabled);
    button.addEventListener('click',()=>choose(option));item.append(button);menu.append(item);entries.push({item,button,option});
   }
   const empty=document.createElement('li');empty.className='select-dropdown-empty';empty.textContent='Tidak ada pilihan yang sesuai.';empty.hidden=true;menu.append(empty);
@@ -119,7 +125,7 @@ if(window.bootstrap?.Dropdown){
    filter('');
   });
   if(editable){
-   wrapper.classList.add('select-dropdown-editable');toggle.classList.add('select-dropdown-input-toggle');control.removeAttribute('list');control.removeAttribute('maxlength');control.setAttribute('autocomplete','off');control.setAttribute('aria-controls',menu.id);control.setAttribute('aria-haspopup','true');
+   wrapper.classList.add('select-dropdown-editable');toggle.classList.add('select-dropdown-input-toggle');control.removeAttribute('list');if(!control.hasAttribute('data-year-control'))control.removeAttribute('maxlength');control.setAttribute('autocomplete','off');control.setAttribute('aria-controls',menu.id);control.setAttribute('aria-haspopup','true');
    control.addEventListener('focus',()=>{if(!skipFocusOpen&&!control.disabled&&!control.readOnly)dropdown.show();});
    control.addEventListener('click',event=>{event.stopPropagation();if(!control.disabled&&!control.readOnly)dropdown.show();});
    control.addEventListener('input',event=>{if(event.isTrusted&&!control.readOnly&&!control.disabled){dropdown.show();filter(control.value);}});

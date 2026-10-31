@@ -53,7 +53,8 @@ async function removeTestPayroll(page,month='4'){
 
 test.describe.serial('Accounting validation, confirmation and feedback',()=>{
  test.beforeEach(async({page,baseURL})=>{
-  expect(new URL(baseURL).origin).toBe('http://127.0.0.1:8018');
+  expect(new URL(baseURL).hostname).toBe('127.0.0.1');
+  expect(new URL(baseURL).origin).toBe(new URL(process.env.PAYROLL_TEST_URL||'http://127.0.0.1:8018').origin);
   await page.goto('/login');
   await page.getByLabel('ID pengguna',{exact:true}).fill('qa_penggajian');
   await page.getByLabel('Kata sandi',{exact:true}).fill('Qa!Payroll-2026-Local');

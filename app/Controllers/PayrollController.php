@@ -92,6 +92,7 @@ final class PayrollController extends Controller
             'id' => $id, 'error' => $error, 'feedback' => $feedback, 'confirmationToken' => $confirmationToken, 'warningsAccepted' => $warningsAccepted,
             'mode' => $mode, 'departments' => $repo->departments(), 'employees' => Database::connection()->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll(), 'employeeName' => $before['nama'] ?? ($values['employee_name'] ?? ''),
             'department' => $before['kd_bagian'] ?? ($values['bagian'] ?? $period['bagian']), 'before' => $before,
+            'yearOptions' => $repo->years([$values['tahun']]),
         ]);
     }
 
