@@ -13,6 +13,26 @@ test.describe.serial('Penggajian with restored source fixtures',()=>{
   state=await page.context().storageState();expect(errors).toEqual([]);
  });
  test.beforeEach(async({context})=>{if(state)await context.addCookies(state.cookies);});
+ test('dashboard dropdowns open and preserve the selected year and department',async({page})=>{
+  await page.goto('/?bulan=9&tahun=2025');
+  const monthToggle=page.getByRole('button',{name:'Pilih bulan',exact:true});
+  await monthToggle.click();await expect(monthToggle).toHaveAttribute('aria-expanded','true');
+  await expect(page.locator('.period-month-menu .dropdown-item')).toHaveCount(12);
+  await page.locator('.period-month-menu').getByRole('button',{name:'Desember',exact:true}).click();
+  await expect(monthToggle).toContainText('Desember');await expect(monthToggle).toHaveAttribute('aria-expanded','false');
+  await page.locator('#period-year').fill('2024');await page.getByRole('button',{name:'Terapkan periode',exact:true}).click();
+  await expect(page.getByText('Periode Desember 2024',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Pilih bagian',exact:true}).click();
+  const department=page.locator('.department-dropdown .dropdown-item').nth(1);const code=await department.getAttribute('data-select-value');
+  await department.click();await expect(page).toHaveURL(new RegExp('bagian='+encodeURIComponent(code)));
+  await expect(page.getByText('Periode Desember 2024',{exact:true})).toBeVisible();
+  await monthToggle.click();await page.locator('.period-month-menu').getByRole('button',{name:'Januari',exact:true}).click();
+  await page.getByRole('button',{name:'Terapkan periode',exact:true}).click();
+  await expect(page).toHaveURL(new RegExp('bagian='+encodeURIComponent(code)));await expect(page.getByText('Periode Januari 2024',{exact:true})).toBeVisible();
+  await monthToggle.focus();await page.keyboard.press('ArrowDown');await expect(monthToggle).toHaveAttribute('aria-expanded','true');
+  await expect(page.locator('.period-month-menu .dropdown-item').first()).toBeFocused();
+  await page.keyboard.press('Escape');await expect(monthToggle).toHaveAttribute('aria-expanded','false');await expect(monthToggle).toBeFocused();
+ });
  test('all legacy master modules and full migration archive',async({page})=>{
   const modules=['bagian','karyawan','tunj_harian','tunj_konsumsi','tunj_lembur','tunj_infal','tunj_overtime','tunj_jam','p_anak','p_bjbs','p_bank','p_lunak','p_lain'];
   for(const key of modules){const response=await page.goto('/master/'+key);expect(response.status()).toBe(200);await expect(page.locator('h1')).toBeVisible();}
@@ -39,7 +59,7 @@ test.describe.serial('Penggajian with restored source fixtures',()=>{
   await page.goto('/laporan?type=rekap_bagian&bulan=9&tahun=2025&rincian=1&view=1');expect(await page.locator('.detailed-screen .report-table thead th').count()).toBe(35);await page.emulateMedia({media:'print'});await expect(page.locator('.sidebar')).toBeHidden();await page.pdf({path:'storage/qa/rekap-rinci.pdf',format:'A4',landscape:true,printBackground:true});
  });
  test('mobile layout, picker, empty state, CSRF and file protection',async({page})=>{
-  await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByRole('button',{name:'Buka navigasi'}).click();await expect(page.locator('body')).toHaveClass(/sidebar-open/);await page.keyboard.press('Escape');await expect(page.locator('body')).not.toHaveClass(/sidebar-open/);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.locator('#period-month').selectOption('9');await page.locator('#period-year').fill('2025');await page.getByRole('button',{name:'Terapkan periode',exact:true}).click();await expect(page.getByText('Periode September 2025',{exact:true})).toBeVisible();await page.screenshot({path:'storage/qa/dashboard-mobile.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByRole('button',{name:'Buka navigasi'}).click();await expect(page.locator('body')).toHaveClass(/sidebar-open/);await page.keyboard.press('Escape');await expect(page.locator('body')).not.toHaveClass(/sidebar-open/);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.getByRole('button',{name:'Pilih bulan',exact:true}).click();await page.locator('.period-month-menu').getByRole('button',{name:'September',exact:true}).click();await page.locator('#period-year').fill('2025');await page.getByRole('button',{name:'Terapkan periode',exact:true}).click();await expect(page.getByText('Periode September 2025',{exact:true})).toBeVisible();await page.screenshot({path:'storage/qa/dashboard-mobile.png',fullPage:true});
   await page.goto('/transaksi/form');await page.getByRole('button',{name:'Cari',exact:true}).click();await page.getByLabel('Cari NIP atau nama').fill('000000000000001');await expect(page.locator('.picker-result')).toHaveCount(1);await page.locator('.picker-result').click();await expect(page.getByLabel('NIP karyawan')).toHaveValue('000000000000001');
   await page.goto('/?bulan=1&tahun=2099');await expect(page.getByText('Belum ada transaksi pada periode ini',{exact:true})).toBeVisible();
   const csrf=await page.request.post('/api/hitung',{form:{hefektif:'21'}});expect(csrf.status()).toBe(419);

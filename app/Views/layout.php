@@ -3,7 +3,7 @@ $currentPath=app_request_path();
 $navGroups=['master'=>['Master Data','building'],'tunjangan'=>['Tunjangan','plus'],'potongan'=>['Potongan','minus']];
 $flashMessages=$_SESSION['flash']??[];unset($_SESSION['flash']);
 ?>
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="app-base-path" content="<?=e(app_base_path())?>"><meta name="csrf-token" content="<?=e(csrf_token())?>"><meta name="theme-color" content="#0B6B43"><title><?=e($title??'Penggajian')?> · Mutiara Hikmah</title><link rel="icon" type="image/svg+xml" href="<?=e(url('public/assets/brand.svg'))?>"><link rel="stylesheet" href="<?=e(url('public/assets/vendor/bootstrap.min.css'))?>"><link rel="stylesheet" href="<?=e(url('public/assets/app.css'))?>"></head><body>
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="app-base-path" content="<?=e(app_base_path())?>"><meta name="csrf-token" content="<?=e(csrf_token())?>"><meta name="theme-color" content="#0B6B43"><title><?=e($title??'Penggajian')?> · Mutiara Hikmah</title><link rel="icon" type="image/svg+xml" href="<?=e(url('public/assets/brand.svg'))?>"><link rel="stylesheet" href="<?=e(url('public/assets/vendor/bootstrap.min.css'))?>"><link rel="stylesheet" href="<?=e(url('public/assets/app.css',['v'=>(string)filemtime(BASE_PATH.'/public/assets/app.css')]))?>"></head><body>
 <a class="skip-link" href="#main-content">Lewati navigasi</a>
 <button class="sidebar-overlay" aria-label="Tutup navigasi" data-sidebar-close></button>
 <aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
@@ -27,5 +27,5 @@ $flashMessages=$_SESSION['flash']??[];unset($_SESSION['flash']);
 <?=$content?>
 <footer class="page-footer"><span>© <?=date('Y')?> Yayasan Mutiara Hikmah</span><span>Dikelola dengan cermat, untuk setiap penghasilan.</span></footer>
 </main></div>
-<script src="<?=e(url('public/assets/vendor/bootstrap.bundle.min.js'))?>" defer></script><script src="<?=e(url('public/assets/vendor/chart.umd.min.js'))?>" defer></script><script src="<?=e(url('public/assets/app.js'))?>" defer></script>
+<script src="<?=e(url('public/assets/vendor/bootstrap.bundle.min.js'))?>" defer></script><script src="<?=e(url('public/assets/vendor/chart.umd.min.js'))?>" defer></script><script src="<?=e(url('public/assets/app.js',['v'=>(string)filemtime(BASE_PATH.'/public/assets/app.js')]))?>" defer></script>
 </body></html>

@@ -1,5 +1,28 @@
-<div class="page-heading"><div><div class="eyebrow">SELAMAT DATANG DI RUANG KERJA ANDA</div><h1>Dashboard Penggajian<span class="heading-dot">.</span></h1><p>Pantau penghasilan, kelola dengan lebih tenang.</p></div><form class="period-picker" method="get"><span class="period-icon"><?=icon('calendar')?></span><label class="visually-hidden" for="period-month">Bulan</label><select name="bulan" id="period-month" aria-label="Bulan"><?php for($m=1;$m<=12;$m++):?><option value="<?=$m?>"<?=selected($period['bulan'],$m)?>><?=month_name($m)?></option><?php endfor;?></select><label class="visually-hidden" for="period-year">Tahun</label><input id="period-year" name="tahun" type="number" min="1900" max="9999" value="<?=$period['tahun']?>" aria-label="Tahun"><button class="icon-button" type="submit" aria-label="Terapkan periode"><?=icon('chevron-down')?></button><?php if($period['bagian']!==''):?><input type="hidden" name="bagian" value="<?=e($period['bagian'])?>"><?php endif;?></form></div>
-<div class="dashboard-context"><span class="context-pill"><span class="status-dot"></span> Periode <?=month_name($period['bulan'])?> <?=$period['tahun']?></span><span class="muted-small"><?=$totals['transactions']?> transaksi tercatat</span><form method="get" class="department-filter"><input type="hidden" name="bulan" value="<?=$period['bulan']?>"><input type="hidden" name="tahun" value="<?=$period['tahun']?>"><label for="filter-department">Bagian</label><select id="filter-department" name="bagian" class="form-select form-select-sm" data-auto-submit><option value="">Semua bagian</option><?php foreach($departments as $d):?><option value="<?=e($d['kd_bagian'])?>"<?=selected($period['bagian'],$d['kd_bagian'])?>><?=e($d['nama_bagian'])?></option><?php endforeach;?></select><button type="submit" class="visually-hidden">Terapkan bagian</button></form></div>
+<div class="page-heading dashboard-heading">
+ <div><div class="eyebrow">SELAMAT DATANG DI RUANG KERJA ANDA</div><h1>Dashboard Penggajian<span class="heading-dot">.</span></h1><p>Pantau penghasilan, kelola dengan lebih tenang.</p></div>
+ <form class="period-picker" method="get" aria-label="Periode dashboard">
+  <div class="dropdown select-dropdown period-month-dropdown">
+   <label class="visually-hidden" for="period-month">Bulan</label>
+   <select class="form-select" name="bulan" id="period-month" data-dropdown-select><?php for($m=1;$m<=12;$m++):?><option value="<?=$m?>"<?=selected($period['bulan'],$m)?>><?=month_name($m)?></option><?php endfor;?></select>
+   <button class="btn btn-light select-dropdown-toggle" id="period-month-toggle" type="button" data-select-toggle data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true" aria-label="Pilih bulan" hidden><?=icon('calendar')?><span data-selected-label><?=month_name($period['bulan'])?></span><?=icon('chevron-down')?></button>
+   <ul class="dropdown-menu period-month-menu" aria-labelledby="period-month-toggle" data-select-options></ul>
+  </div>
+  <div class="period-year-field"><label class="visually-hidden" for="period-year">Tahun</label><input class="form-control" id="period-year" name="tahun" type="number" min="1900" max="9999" value="<?=$period['tahun']?>" aria-label="Tahun" required></div>
+  <button class="btn btn-primary period-apply" type="submit" aria-label="Terapkan periode" title="Terapkan periode"><?=icon('check')?><span>Terapkan</span></button>
+  <?php if($period['bagian']!==''):?><input type="hidden" name="bagian" value="<?=e($period['bagian'])?>"><?php endif;?>
+ </form>
+</div>
+<div class="dashboard-context">
+ <span class="context-pill"><span class="status-dot"></span> Periode <?=month_name($period['bulan'])?> <?=$period['tahun']?></span><span class="muted-small"><?=$totals['transactions']?> transaksi tercatat</span>
+ <form method="get" class="department-filter"><input type="hidden" name="bulan" value="<?=$period['bulan']?>"><input type="hidden" name="tahun" value="<?=$period['tahun']?>"><label for="filter-department">Bagian</label>
+  <div class="dropdown select-dropdown department-dropdown">
+   <select id="filter-department" name="bagian" class="form-select form-select-sm" data-auto-submit data-dropdown-select><option value="">Semua bagian</option><?php foreach($departments as $d):?><option value="<?=e($d['kd_bagian'])?>"<?=selected($period['bagian'],$d['kd_bagian'])?>><?=e($d['nama_bagian'])?></option><?php endforeach;?></select>
+   <button class="btn btn-light select-dropdown-toggle" id="filter-department-toggle" type="button" data-select-toggle data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true" aria-label="Pilih bagian" hidden><span data-selected-label></span><?=icon('chevron-down')?></button>
+   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="filter-department-toggle" data-select-options></ul>
+  </div>
+  <noscript><button type="submit" class="btn btn-light btn-sm">Terapkan bagian</button></noscript>
+ </form>
+</div>
 <?php if(!$migration):?><div class="migration-callout"><?=icon('database')?><div><strong>Ruang kerja siap menerima data Anda.</strong><span>Data lama belum dimigrasikan. Ringkasan akan terisi setelah impor atau transaksi pertama.</span></div><a href="<?=e(url('migrasi'))?>">Lihat status <?=icon('arrow-right')?></a></div><?php endif;?>
 <section class="stats-grid" aria-label="Ringkasan penggajian">
 <?php $stats=[['Total Karyawan',(string)$employeeCount,'Karyawan pada bagian terpilih','users','mint'],['Penghasilan Bruto',money($totals['tpenghasilan']),'Total pendapatan periode ini','wallet','forest'],['Total Potongan',money($totals['tpotongan']),'Seluruh komponen potongan','receipt','sage'],['Penghasilan Bersih',money($totals['tbersih']),'Bruto dikurangi potongan','check','emerald']];foreach($stats as [$label,$value,$hint,$glyph,$color]):?>

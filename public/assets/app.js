@@ -9,9 +9,25 @@ document.querySelectorAll('[data-password-toggle]').forEach(button=>button.addEv
 document.querySelectorAll('form[data-confirm]').forEach(form=>form.addEventListener('submit',event=>{if(!window.confirm(form.dataset.confirm))event.preventDefault();}));
 document.querySelectorAll('[data-print]').forEach(button=>button.addEventListener('click',()=>window.print()));
 document.querySelectorAll('[data-report-range]').forEach(input=>input.addEventListener('change',()=>{document.querySelectorAll('[data-range-field]').forEach(field=>{field.hidden=!input.checked;field.querySelectorAll('input,select').forEach(i=>i.disabled=!input.checked);});}));
+// Enhance dashboard selects with the local Bootstrap dropdown; keep native controls without JavaScript.
+if(window.bootstrap?.Dropdown){
+ document.querySelectorAll('[data-dropdown-select]').forEach(select=>{
+  const wrapper=select.closest('.select-dropdown');const toggle=wrapper.querySelector('[data-select-toggle]');const menu=wrapper.querySelector('[data-select-options]');const label=toggle.querySelector('[data-selected-label]');
+  const sync=()=>{
+   label.textContent=select.selectedOptions[0]?.textContent??'';
+   menu.querySelectorAll('[data-select-value]').forEach(button=>{const active=button.dataset.selectValue===select.value;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','true');else button.removeAttribute('aria-current');});
+  };
+  for(const option of select.options){
+   const item=document.createElement('li');const button=document.createElement('button');button.type='button';button.className='dropdown-item';button.dataset.selectValue=option.value;button.textContent=option.textContent;button.disabled=option.disabled;
+   button.addEventListener('click',()=>{const changed=select.value!==option.value;select.value=option.value;sync();bootstrap.Dropdown.getOrCreateInstance(toggle).hide();toggle.focus();if(changed)select.dispatchEvent(new Event('change',{bubbles:true}));});
+   item.append(button);menu.append(item);
+  }
+  sync();select.addEventListener('change',sync);select.hidden=true;toggle.hidden=false;
+ });
+}
 const dashData=document.getElementById('dashboard-data');
 if(dashData&&window.Chart){
- const data=JSON.parse(dashData.textContent);const font={family:"'Segoe UI',Arial,sans-serif",size:12};
+ const data=JSON.parse(dashData.textContent);const font={family:"'Segoe UI',Arial,sans-serif",size:14};
  Chart.defaults.font.family=font.family;Chart.defaults.font.size=font.size;Chart.defaults.color='#9aaf9d';Chart.defaults.plugins.legend.display=false;
  const annual=document.getElementById('annual-chart');
  const annualCtx=annual.getContext('2d');const bars=annualCtx.createLinearGradient(0,0,0,220);bars.addColorStop(0,'#b8deb7');bars.addColorStop(1,'#5a9d79');
