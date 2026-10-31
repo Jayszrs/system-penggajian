@@ -41,16 +41,60 @@ test.describe.serial('Penggajian with restored source fixtures',()=>{
  });
  test('master CRUD preserves leading zero NIP and validates dependencies',async({page})=>{
   await page.goto('/master/bagian?new=1');await page.getByLabel('Kode bagian').fill('TQA01');await page.getByLabel('Nama bagian').fill('Bagian pengujian');await page.getByRole('button',{name:'Simpan data'}).click();await expect(page.locator('.alert-success')).toContainText('disimpan');
-  await page.goto('/master/karyawan?new=1');await page.locator('#master-nip').fill('000000000000001');await page.getByLabel('Nama lengkap').fill('Karyawan <Uji>');await page.locator('#master-kd_bagian').selectOption('TQA01');await page.locator('#master-gapok').fill('1000000');await page.locator('#master-t_harian').fill('20000');await page.getByRole('button',{name:'Simpan data'}).click();await expect(page.locator('tbody')).toContainText('000000000000001');await expect(page.locator('tbody')).toContainText('Karyawan <Uji>');expect(await page.locator('tbody script').count()).toBe(0);
+  await page.goto('/master/karyawan?new=1');await page.locator('#master-nip').fill('000000000000001');await page.getByLabel('Nama lengkap').fill('Karyawan <Uji>');await page.locator('#master-kd_bagian-toggle').click();await page.locator('#master-kd_bagian-options [data-select-value="TQA01"]').click();await page.locator('#master-gapok').fill('1000000');await page.locator('#master-t_harian').fill('20000');await expect(page.locator('#master-gapok')).toHaveValue('1.000.000');await expect(page.locator('#master-t_harian')).toHaveValue('20.000');await page.getByRole('button',{name:'Simpan data'}).click();await expect(page.locator('tbody')).toContainText('000000000000001');await expect(page.locator('tbody')).toContainText('Karyawan <Uji>');expect(await page.locator('tbody script').count()).toBe(0);
   await page.goto('/master/bagian?q=TQA01');page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Hapus TQA01',exact:true}).click();await expect(page.locator('.alert-danger')).toContainText('masih digunakan');
+ });
+ test('shared dropdowns validate required choices, search names and sync payroll controls',async({page})=>{
+  const failures=[];page.on('pageerror',error=>failures.push(error.message));
+  await page.goto('/master/p_anak?new=1');await page.getByRole('button',{name:'Simpan data',exact:true}).click();
+  const employeeToggle=page.locator('#master-nip-toggle');await expect(employeeToggle).toBeFocused();await expect(employeeToggle).toHaveAttribute('aria-invalid','true');
+  await expect(page.locator('.select-dropdown .invalid-feedback')).toContainText('terlebih dahulu');
+  await page.locator('#master-nip-options input[type=search]').fill('Karyawan <Uji>');
+  await expect(page.locator('#master-nip-options .dropdown-item:visible')).toHaveCount(1);
+  await page.locator('#master-nip-options [data-select-value="000000000000001"]').click();
+  await expect(page.locator('#master-nip')).toHaveValue('000000000000001');await expect(employeeToggle).not.toHaveAttribute('aria-invalid');
+  await page.goto('/transaksi/form?bulan=10&tahun=2026&bagian=TQA01');
+  await page.getByLabel('NIP karyawan').fill('000000000000001');await page.getByLabel('Hari efektif',{exact:true}).fill('21');await page.getByLabel('Masuk kerja',{exact:true}).fill('21');
+  await page.getByRole('button',{name:'Muat komponen master',exact:true}).click();await expect(page.locator('[data-total=tbersih]')).toHaveText('Rp 1.420.000');
+  await expect(page.locator('#form-department-toggle')).toContainText('Bagian pengujian');await expect(page.locator('#calculation-mode-toggle')).toContainText('Hitung dari master saat ini');
+  await page.locator('#calculation-mode-toggle').click();await page.locator('#calculation-mode-options [data-select-value="manual"]').click();
+  await expect(page.getByLabel('Gaji pokok',{exact:true})).not.toHaveAttribute('readonly');expect(failures).toEqual([]);
+ });
+ test('formatted integer inputs preserve precision, editing and raw calculation requests',async({page})=>{
+  await page.goto('/transaksi/form?bulan=10&tahun=2026&bagian=TQA01');
+  await page.getByLabel('NIP karyawan').fill('000000000000001');await page.getByLabel('Hari efektif',{exact:true}).fill('21');await page.getByLabel('Masuk kerja',{exact:true}).fill('21');
+  await page.locator('#calculation-mode-toggle').click();await page.locator('#calculation-mode-options [data-select-value="manual"]').click();
+  await expect(page.getByLabel('Gaji pokok',{exact:true})).not.toHaveAttribute('readonly');
+  const amount=page.getByLabel('Gaji pokok',{exact:true});
+  const calculated=async(raw,formatted)=>{
+   const response=page.waitForResponse(r=>r.url().endsWith('/api/hitung')&&r.request().method()==='POST'&&r.request().postData()?.includes('name="gapok"\r\n\r\n'+raw+'\r\n'));
+   await amount.fill(raw);await expect(amount).toHaveValue(formatted);const result=await response;expect(result.status()).toBe(200);expect((await result.json()).values.gapok).toBe(raw);
+   expect(await page.locator('#payroll-form').evaluate(form=>new FormData(form).get('gapok'))).toBe(raw);
+  };
+  await calculated('100000','100.000');
+  await amount.evaluate(input=>input.setSelectionRange(1,1));await page.keyboard.insertText('2');await expect(amount).toHaveValue('1.200.000');expect(await amount.evaluate(input=>input.selectionStart)).toBe(3);
+  await amount.fill('1234567');await amount.evaluate(input=>input.setSelectionRange(2,2));await page.keyboard.press('Backspace');await expect(amount).toHaveValue('234.567');
+  await amount.evaluate(input=>input.select());await amount.evaluate(input=>{const data=new DataTransfer();data.setData('text/plain','100.000');input.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data}));});await expect(amount).toHaveValue('100.000');
+  await calculated('999999999999999999','999.999.999.999.999.999');await calculated('-100000','-100.000');
+  await amount.fill('1e10');expect(await amount.evaluate(input=>input.checkValidity())).toBe(false);
+  await amount.fill('100000');await amount.evaluate(input=>input.select());await amount.evaluate(input=>{const data=new DataTransfer();data.setData('text/plain','1,50');input.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data}));});await expect(amount).toHaveValue('100.000');expect(await amount.evaluate(input=>input.checkValidity())).toBe(false);
+  await amount.fill('');await expect(amount).toHaveValue('');expect(await amount.evaluate(input=>input.checkValidity())).toBe(true);
  });
  test('server calculations, duplicate period, history after tariff changes, and cancellation',async({page})=>{
   await page.goto('/transaksi/form?bulan=10&tahun=2026&bagian=TQA01');await page.getByLabel('NIP karyawan').fill('000000000000001');await page.getByLabel('Hari efektif',{exact:true}).fill('21');await page.getByLabel('Masuk kerja',{exact:true}).fill('21');await page.getByRole('button',{name:'Muat komponen master'}).click();await expect(page.locator('[data-total=tbersih]')).toHaveText('Rp 1.420.000');
   await page.getByRole('button',{name:'Simpan penghasilan'}).click();await expect(page.locator('.alert-success')).toContainText('disimpan');const savedUrl=page.url();
   await page.goto('/transaksi/form?bulan=10&tahun=2026&bagian=TQA01');await page.getByLabel('NIP karyawan').fill('000000000000001');await page.getByLabel('Hari efektif',{exact:true}).fill('21');await page.getByLabel('Masuk kerja',{exact:true}).fill('21');await page.getByRole('button',{name:'Simpan penghasilan'}).click();await expect(page.locator('.alert-danger')).toContainText('sudah memiliki transaksi');
   await page.goto('/master/karyawan?q=000000000000001');await page.getByRole('link',{name:'Ubah 000000000000001',exact:true}).click();await page.locator('#master-gapok').fill('2000000');await page.getByRole('button',{name:'Simpan data'}).click();
-  await page.goto(savedUrl);await expect(page.locator('[data-total=tbersih]')).toHaveText('Rp 1.420.000');await expect(page.getByLabel('Perhitungan',{exact:true})).toHaveValue('manual');
-  await page.getByLabel('Gaji pokok',{exact:true}).fill('9999');await page.getByRole('link',{name:'Batal',exact:true}).click();await page.goto(savedUrl);await expect(page.getByLabel('Gaji pokok',{exact:true})).toHaveValue('1000000');
+  await page.goto(savedUrl);await expect(page.locator('[data-total=tbersih]')).toHaveText('Rp 1.420.000');await expect(page.locator('#calculation-mode')).toHaveValue('manual');await expect(page.locator('#form-month-toggle')).toBeDisabled();await expect(page.locator('#form-department-toggle')).toBeDisabled();
+  await page.getByLabel('Gaji pokok',{exact:true}).fill('9999');await page.getByRole('link',{name:'Batal',exact:true}).click();await page.goto(savedUrl);await expect(page.getByLabel('Gaji pokok',{exact:true})).toHaveValue('1.000.000');
+ });
+ test('report dropdowns share employee search and submit the original NIP and filters',async({page})=>{
+  await page.goto('/laporan?type=slip_karyawan&bulan=10&tahun=2026');
+  await page.locator('#report-scope-toggle').click();await page.locator('#report-scope-options [data-select-value="tertentu"]').click();
+  await page.getByLabel('Karyawan',{exact:true}).fill('Karyawan <Uji>');await expect(page.locator('#report-employee-options')).toBeVisible();
+  await expect(page.locator('#report-employee-options .dropdown-item:visible')).toHaveCount(1);await page.locator('#report-employee-options [data-select-value="000000000000001"]').click();
+  await expect(page.getByLabel('Karyawan',{exact:true})).toHaveValue('000000000000001');
+  await page.getByRole('button',{name:'Tampilkan',exact:true}).click();await expect(page.locator('.slip')).toBeVisible();await expect(page.locator('.slip-identity')).toContainText('000000000000001');
  });
  test('all seven reports, cross-year range, explicit coverage and printable details',async({page})=>{
   const types=['slip_karyawan','slip_bagian','rekap_bagian','rekap_periode','rekap_periode_bagian','absensi','gapok'];
