@@ -6,15 +6,17 @@
 <?php else:?>
 <div class="report-title"><small>YAYASAN MUTIARA HIKMAH</small><h2><?=e($reportTitle)?></h2><p><?=$type==='gapok'?'Struktur gaji master · Dicetak '.date('d/m/Y'):e($rangeLabel)?> · <?=$scope==='semua'?'Semua '.($employeeScope?'karyawan':'bagian'):($employeeScope?'NIP '.e($nip):'Bagian '.e($period['bagian']))?></p></div>
 <?php
-if($type==='gapok')$columns=['nip'=>'NIP','nama'=>'Nama','nama_bagian'=>'Bagian','gapok'=>'Gaji pokok','t_jabatan'=>'T. jabatan','t_harian'=>'Tarif harian','t_lembur'=>'Tarif lembur','total_struktur'=>'Total struktur'];
+if($type==='gapok')$columns=['nip'=>'NIP','nama'=>'Nama','nama_bagian'=>'Bagian','gapok'=>'Gaji pokok (Rp/bulan)','t_jabatan'=>'T. jabatan (Rp/bulan)','t_harian'=>'Tarif harian (Rp/hari)','t_lembur'=>'Tarif lembur (Rp/satuan)','total_tetap'=>'Total tetap (Rp/bulan)'];
 elseif($type==='absensi')$columns=['nip'=>'NIP','nama'=>'Nama','nama_bagian'=>'Bagian','bulan'=>'Bulan','tahun'=>'Tahun',...App\Domain\PayrollFields::ATTENDANCE];
 elseif($detailed)$columns=['nip'=>'NIP','nama'=>'Nama','nama_bagian'=>'Bagian','bulan'=>'Bulan','tahun'=>'Tahun',...App\Domain\PayrollFields::ATTENDANCE,...App\Domain\PayrollFields::INCOME,...App\Domain\PayrollFields::DEDUCTIONS,...App\Domain\PayrollFields::TOTALS];
 else $columns=['nip'=>'NIP','nama'=>'Nama','nama_bagian'=>'Bagian','bulan'=>'Bulan','tahun'=>'Tahun',...App\Domain\PayrollFields::TOTALS];
-$isNumber=static fn($f)=>isset($totals[$f]);$isMoney=static fn($f)=>isset(App\Domain\PayrollFields::INCOME[$f])||isset(App\Domain\PayrollFields::DEDUCTIONS[$f])||isset(App\Domain\PayrollFields::TOTALS[$f])||in_array($f,['t_lembur','total_struktur'],true);
+$isNumber=static fn($f)=>isset(App\Domain\PayrollFields::numeric()[$f])||in_array($f,['t_lembur','total_tetap'],true);
+$isSummable=static fn($f)=>array_key_exists($f,$totals);
+$isMoney=static fn($f)=>isset(App\Domain\PayrollFields::INCOME[$f])||isset(App\Domain\PayrollFields::DEDUCTIONS[$f])||isset(App\Domain\PayrollFields::TOTALS[$f])||in_array($f,['t_lembur','total_tetap'],true);
 $groupTotals=[];$lastGroup=null;
 ?>
 <div class="<?= $detailed?'detailed-screen':'' ?>"><?php require __DIR__.'/report-table.php'; ?></div>
 <?php if($detailed):$identity=['nip'=>'NIP','nama'=>'Nama','nama_bagian'=>'Bagian','bulan'=>'Bulan','tahun'=>'Tahun'];$printSections=['Penghasilan'=>App\Domain\PayrollFields::INCOME,'Potongan'=>App\Domain\PayrollFields::DEDUCTIONS,'Kehadiran dan Jumlah Kegiatan'=>App\Domain\PayrollFields::ATTENDANCE,'Ringkasan Penghasilan'=>App\Domain\PayrollFields::TOTALS]; ?>
 <div class="print-only detailed-print"><?php foreach($printSections as $partTitle=>$partFields):$columns=[...$identity,...$partFields];?><section class="print-report-section"><h3><?=e($reportTitle)?> &middot; <?=e($partTitle)?></h3><p><?=e($rangeLabel)?></p><?php require __DIR__.'/report-table.php'; ?></section><?php endforeach;?></div>
-<?php endif;?><p class="muted-small mt-3">Dicetak <?=date('d/m/Y H:i')?> WIB<?=$type==='gapok'?' · Total struktur menjumlahkan nilai master; tarif harian/lembur bukan pendapatan bulanan.':''?></p>
+<?php endif;?><p class="muted-small mt-3">Dicetak <?=date('d/m/Y H:i')?> WIB<?php if($type==='gapok'):?> · Total tetap adalah gaji pokok + tunjangan jabatan per bulan. Tarif harian dan tarif per satuan lembur tidak dijumlahkan.<?php elseif($type==='absensi'||$detailed):?> · Kehadiran per baris dalam hari; subtotal dan jumlah kehadiran dalam orang-hari. Lembur, infal, dan overtime dalam jumlah kegiatan.<?php endif;?></p>
 <?php endif;?></div><?php endif;?></section><?php else:?><div class="empty-state"><?=icon('print')?><strong>Pratinjau laporan Anda akan tampil di sini</strong><p>Pilih jenis laporan, tentukan cakupan, lalu klik Tampilkan.</p></div><?php endif;?>

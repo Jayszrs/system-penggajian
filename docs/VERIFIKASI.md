@@ -36,9 +36,20 @@ Nominal rekonsiliasi lengkap tersedia hanya pada laporan lokal `storage/legacy/r
 
 Migrasi memeriksa nilai setiap kolom yang dipetakan; pengujian finansial tidak menghitung ulang tarif historis menggunakan master sekarang.
 
-`php tests/calculator-integration.php` juga lolos **18 pemeriksaan integrasi** untuk tarif harian, konsumsi, lembur, infal, overtime, kelebihan mengajar, binding BJBS/bank/lain-lain, dan pembulatan. Fixture ditulis dalam transaksi khusus database uji lalu di-rollback.
+Audit lanjutan membedakan bukti sumber `legacy_v1` dari koreksi transaksi baru `accounting_v2`. Pembulatan baru dilakukan per komponen sebelum penjumlahan, sehingga komponen yang ditampilkan, bruto, potongan, dan bersih saling cocok. Master `p_lain` menjadi potongan `plain` pada versi baru; binding native lama ke penghasilan `lain1` tetap didokumentasikan dan nominal historis tidak direklasifikasi massal.
 
-Penyimpanan mengikuti konversi numeric sumber per kolom. Pada kasus sintetis yang menghasilkan setengah rupiah, pembulatan komponen/total secara terpisah dapat menghasilkan selisih satu rupiah ketika total tersimpan dikurangkan ulang; hasil sebelum pembulatan tetap menjadi dasar kalkulasi. Hal ini didokumentasikan dan tidak digunakan untuk menghitung ulang data historis.
+| Pengujian audit | Pemeriksaan lolos | Cara kerja |
+|---|---:|---|
+| `php tests/calculator-accounting.php` | 91 | Fixture aritmetika/validasi murni, tanpa database |
+| `php tests/calculator-integration.php` | 29 | Pemetaan master/tarif, pembulatan, snapshot; fixture database uji di-rollback |
+| `php tests/confirmation-accounting.php` | 126 | Token sesi, perubahan hasil/sumber/identitas, masa berlaku, dan parser periode; tanpa database |
+| `php tests/workflow-accounting.php` | 64 | Pratinjau, konfirmasi, simpan, perlindungan revisi, histori; khusus database uji |
+| `php tests/report-accounting.php` | 42.760 | Render slip/rekap dibandingkan baris sumber, subtotal, total, unit, rentang, dan filter; hanya baca |
+| `php tests/dashboard-accounting.php` | 2.521 | Kartu, grafik, kelompok bagian, dan tautan dibandingkan dengan komponen transaksi; hanya baca |
+
+Audit hanya baca pada 332 transaksi aktif menemukan nol perbedaan antara jumlah komponen dan bruto, jumlah potongan dan total potongan, serta bruto dikurangi potongan dan bersih. Tidak ditemukan NULL komponen/total, periode invalid, duplikasi NIP/periode, snapshot identitas kosong, atau referensi hilang. Koreksi pembulatan mencegah kesalahan pada kasus pecahan sintetis dan transaksi mendatang; bukan alasan mengganti nominal histori yang telah cocok.
+
+Migrasi metadata `scripts/migrate-accounting.php` tidak mengubah nominal. Baseline dan ekspor sebelum perubahan berada lokal di `storage/audit/`; hasil pemeriksaan sesudah penerapan ditulis oleh `scripts/verify-accounting-baseline.php`. Kelengkapan rollout lokal perlu dinilai dari hasil verifikasi baseline tersebut, bukan hanya keberhasilan pengujian pada database uji.
 
 ## Pengujian browser
 
@@ -51,13 +62,13 @@ Enam skenario end-to-end mencakup:
 5. Ketujuh laporan, rentang lintas tahun, penolakan rentang terbalik, seluruh komponen, serta cetak PDF.
 6. Layout ponsel, buka/tutup sidebar, pemilih periode, pencarian karyawan, periode kosong, penolakan CSRF, dan perlindungan berkas internal.
 
-Hasil akhir suite: **6 skenario lolos**. Gambar desktop/ponsel disimpan di `storage/qa/`; data uji dipisahkan dari database aplikasi utama.
+Hasil verifikasi sebelum audit kalkulasi: **6 skenario lolos**. Gambar desktop/ponsel disimpan di `storage/qa/`; data uji dipisahkan dari database aplikasi utama. Suite browser untuk perubahan audit mencakup pula dialog informasi/peringatan/kesalahan, konfirmasi hasil terbaru, dan kegagalan simpan tanpa kehilangan isian; hasil run terbaru masih perlu dicatat sebelum dinyatakan lolos.
 
 ## Akses Laragon melalui domain dan subfolder
 
 Pengalihan login, tautan halaman, aset lokal, formulir, dan endpoint JSON mengikuti lokasi aplikasi secara otomatis. Akses Apache pada `http://system-penggajian.test/` serta `http://localhost/system-penggajian/` telah diperiksa: keduanya mengarah ke halaman login yang benar dengan HTTP 200. Endpoint tanpa sesi mengembalikan JSON 401 dan ekspor database terlindungi dengan HTTP 403.
 
-`node tests/laragon-routing.js` lolos pada dua konfigurasi server terisolasi: akar domain dan subfolder. Pengujian mencakup masuk, aset tanpa 404, navigasi, identitas/menu aktif, pencarian karyawan, pratinjau perhitungan, formulir master dan pembatalan, laporan, penolakan CSRF dalam JSON, perlindungan arsip, dan keluar akun. Enam skenario browser utama serta 1.835 pemeriksaan data dan kalkulasi juga tetap lolos.
+Pada verifikasi sebelum audit kalkulasi, `node tests/laragon-routing.js` lolos pada dua konfigurasi server terisolasi: akar domain dan subfolder. Pengujian mencakup masuk, aset tanpa 404, navigasi, identitas/menu aktif, pencarian karyawan, pratinjau perhitungan, formulir master dan pembatalan, laporan, penolakan CSRF dalam JSON, perlindungan arsip, dan keluar akun. Pemeriksaan jalur ini perlu diulang bersama suite browser versi audit.
 
 ## Pemeriksaan PDF
 
@@ -72,3 +83,5 @@ PDF rincian September 2025 diperiksa menggunakan parser PDF: teks kolom terakhir
 - Tidak ada klaim kesetaraan floating point VB6 pada nilai ekstrem di luar presisi integer Double; nominal sumber diimpor sebagai string desimal tanpa kehilangan presisi.
 - Tidak ada pembuatan data contoh di database aplikasi utama. Akun pertama tetap dibuat oleh pengguna.
 - SHA-256 sumber dicatat dalam dokumen pemetaan dan laporan rekonsiliasi; berkas sumber tidak dimodifikasi.
+- Bobot potongan absensi mengikuti kebijakan lama; pengujian kecocokan rumus tidak membuktikan kepatuhan terhadap kebijakan ketenagakerjaan tertentu.
+- BJBS/BPJS adalah nominal master. Aplikasi belum menghitung persentase, dasar iuran, batas upah, pembagian pemberi kerja/karyawan, atau pajak otomatis.

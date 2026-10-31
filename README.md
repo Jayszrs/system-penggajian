@@ -23,6 +23,18 @@ php scripts/install.php
 
 Gunakan nama database kosong yang khusus untuk aplikasi ini. Installer membuat tabel yang belum ada dan tidak menghapus tabel atau data yang sudah tersedia. Arahkan virtual host ke direktori proyek; `.htaccess` melindungi source, konfigurasi, arsip, skrip, dan dokumentasi dari HTTP. Untuk jaringan kantor, arahkan akses ke komputer Laragon tersebut sesuai pengaturan jaringan setempat.
 
+### Memperbarui instalasi yang sudah berisi data
+
+Cadangkan database terlebih dahulu ke lokasi privat di `storage/`. Setelah kode diperbarui, jalankan:
+
+```powershell
+php scripts/migrate-accounting.php
+```
+
+Migrasi ini idempoten: menambahkan `calculation_version` dan `calculation_snapshot` hanya jika belum ada. Nominal, 32 kolom sumber, identitas transaksi, dan arsip tidak dihitung ulang. Transaksi lama diberi versi `legacy_v1`; transaksi baru atau perubahan komponen yang dihitung ulang memakai `accounting_v2`. Installer baru sudah menjalankan migrasi metadata ini secara otomatis.
+
+Baseline audit serta backup lokal berada di `storage/audit/` dan `storage/exports/`; keduanya diabaikan Git dan dilindungi dari akses HTTP. Jika baseline audit lokal sudah tersedia, jalankan `php scripts/verify-accounting-baseline.php` untuk membandingkan checksum kolom asli sebelum/sesudah pembaruan. Skrip tersebut membaca database dan menulis hasil verifikasi ke direktori audit privat.
+
 ### Launcher lokal Windows
 
 Setelah `.env` dan database disiapkan, aktifkan MySQL di Laragon lalu klik dua kali `JALANKAN.bat`. Launcher membuka **http://127.0.0.1:8018** dan menjalankan server PHP di latar belakang. Apache tidak diperlukan untuk alamat ini; akses hanya tersedia dari komputer yang menjalankan launcher.
@@ -72,17 +84,25 @@ Skrip impor menolak menimpa tabel operasional yang sudah berisi data. Backup sam
 - **Data & Migrasi:** riwayat rekonsiliasi dan seluruh tabel arsip hanya baca.
 - **Profil:** ubah nama atau kata sandi menggunakan kata sandi saat ini.
 
-Setiap simpan dihitung ulang di server; nilai total yang dikirim browser tidak dipercaya. Transaksi NIP/periode sama ditolak dan pengguna perlu membuka transaksi yang sudah ada. Perubahan tarif master tidak mengubah transaksi historis secara otomatis.
+Setiap simpan melewati evaluasi server; nilai total yang dikirim browser tidak dipercaya. Komponen yang berubah dihitung ulang, sedangkan penyimpanan tanpa perubahan mempertahankan nominal sebelumnya. Transaksi NIP/periode sama ditolak dan pengguna perlu membuka transaksi yang sudah ada. Perubahan tarif master tidak mengubah transaksi historis secara otomatis.
+
+Pada `accounting_v2`, nominal setiap komponen dibulatkan ke rupiah sebelum dijumlahkan: bruto = seluruh penghasilan, potongan = seluruh potongan, bersih = bruto − potongan. Master potongan lain-lain mengisi `plain`; `lain1` tetap penghasilan manual. Dashboard menghitung penerima berdasarkan NIP unik yang benar-benar memiliki transaksi pada periode/bagian terpilih. Rekap gaji pokok menjumlahkan gaji pokok + jabatan; tarif harian dan lembur hanya ditampilkan sebagai tarif, tanpa subtotal.
+
+Kesalahan masukan memblokir simpan. Peringatan, seperti kehadiran belum lengkap, perubahan manual, atau hitung ulang histori, perlu diperiksa dan dikonfirmasi melalui dialog sebelum disimpan. Perubahan nominal, sumber tarif, atau revisi transaksi setelah pratinjau memerlukan pemeriksaan hasil terbaru. Aturan absensi lama dan nominal BJBS/BPJS tetap ditampilkan sebagai dasar perhitungan, tanpa menambahkan asumsi kebijakan atau persentase baru.
 
 ## Pengujian
 
 ```powershell
 php tests/run.php
+php tests/calculator-accounting.php
+php tests/confirmation-accounting.php
+php tests/report-accounting.php
+php tests/dashboard-accounting.php
 ```
 
-Pengujian tersebut memerlukan ekspor SQL Server lokal di `storage/legacy/export.json` dan database hasil migrasi sebagai pembanding hanya baca: 332 fixture transaksi, 332 rumus absensi, dan 485 checksum arsip.
+`tests/run.php` memerlukan ekspor SQL Server lokal di `storage/legacy/export.json` dan database hasil migrasi sebagai pembanding hanya baca: 332 fixture transaksi, 332 rumus absensi, dan 485 checksum arsip. Pengujian kalkulasi dan konfirmasi merupakan fixture murni tanpa koneksi database. Pengujian laporan/dashboard membaca transaksi dalam database yang dikonfigurasi melalui transaksi hanya baca; keluarannya tidak memuat nominal atau identitas karyawan.
 
-Setelah database uji disiapkan oleh suite browser, pemetaan tarif/master dapat diuji dengan `php tests/calculator-integration.php`. Seluruh penulisan fixture pada pengujian ini di-rollback.
+Setelah database uji disiapkan oleh suite browser, jalankan `php tests/calculator-integration.php` untuk pemetaan tarif/master dan `php tests/workflow-accounting.php` untuk pratinjau, konfirmasi, simpan, serta benturan revisi. Keduanya membatasi penulisan ke `penggajian_test`; fixture integrasi di-rollback dan fixture alur dibersihkan setelah pemeriksaan. Jangan mengarahkannya ke database kerja.
 
 Untuk pengujian browser, jalankan terminal terpisah:
 
@@ -107,8 +127,9 @@ Setelah suite browser selesai, jalankan `node tests/laragon-routing.js` untuk me
 - `docs/KAMUS_DATA.md`: seluruh tabel/kolom database hasil restore dan pemetaannya.
 - `docs/PEMETAAN_LEGACY.md`: form, handler, sumber tarif, pemetaan field, dan rumus yang ditelusuri dari EXE.
 - `docs/VERIFIKASI.md`: hasil pemeriksaan dan keterbatasan.
+- `docs/AUDIT_PENGGAJIAN.md`: temuan audit angka, aturan versi baru, pelestarian histori, serta batas kebijakan.
 - `storage/legacy/reconciliation.json`: hasil rekonsiliasi terstruktur.
 
 EXE tidak dieksekusi pada lingkungan Windows 7. Kesetaraan perhitungan dibuktikan melalui handler native dan data transaksi tersimpan; ini bukan klaim bahwa seluruh interaksi EXE telah dijalankan. Template `.rpt` tidak tersedia, sehingga laporan dibangun ulang dari data dan dokumentasi visual; kesamaan persis tata letak/pengelompokan Crystal Reports lama belum dapat dibuktikan.
 
-Nilai historis tidak dihitung ulang ketika diimpor. Tidak ada status pembayaran, approval, pajak baru, fingerprint, atau transfer bank otomatis yang ditambahkan.
+Nilai historis tidak dihitung ulang ketika diimpor. Penyimpanan ulang tanpa perubahan komponen mempertahankan nilai dan versi sebelumnya. Konfirmasi peringatan adalah pemeriksaan oleh pengguna yang sedang memasukkan transaksi; aplikasi belum menyediakan persetujuan berjenjang, status pembayaran, mesin pajak/iuran otomatis, absensi sidik jari, atau transfer bank otomatis.

@@ -164,7 +164,7 @@ async function verify(browser, folder) {
     await expect(page.locator('[data-nav-group=transaksi]')).toHaveJSProperty('open', true);
     await expect(page.getByRole('navigation', { name: 'Ruang kerja', exact: true }).locator('a[aria-current=page]')).toHaveText('Penggajian');
     await page.getByRole('button', { name: 'Cari', exact: true }).click();
-    await expect(page.locator('.picker-result').first()).toBeVisible();
+    await page.getByLabel('Cari NIP atau nama').fill('000000000000001');await expect(page.locator('.picker-result')).toHaveCount(1);await expect(page.locator('.picker-result').first()).toBeVisible();
     await page.locator('.picker-result').first().click();
     await page.getByLabel('Hari efektif', { exact: true }).fill('21');
     await page.getByLabel('Masuk kerja', { exact: true }).fill('21');

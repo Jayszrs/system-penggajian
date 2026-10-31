@@ -1,4 +1,35 @@
-<?php $groupTotals=[];$lastGroup=null; ?>
-<div class="table-responsive"><table class="report-table"><thead><tr><th>No.</th><?php foreach($columns as $field=>$label):?><th class="<?=$isNumber($field)?'text-end':''?>"><?=e($label)?></th><?php endforeach;?></tr></thead><tbody>
-<?php foreach($rows as $index=>$row):$group=(string)($row['kd_bagian']??'');if($lastGroup!==null && $group!==$lastGroup):?><tr class="report-subtotal"><td></td><?php foreach($columns as $f=>$label):?><td class="<?=$isNumber($f)?'text-end amount':''?>"><?php if($f==='nama'):?>Subtotal bagian<?php elseif($isNumber($f)):?><?=$isMoney($f)?money($groupTotals[$f]??'0'):e($groupTotals[$f]??'0')?><?php endif;?></td><?php endforeach;?></tr><?php $groupTotals=[];endif;$lastGroup=$group;foreach($totals as $f=>$total)$groupTotals[$f]=bcadd($groupTotals[$f]??'0',(string)($row[$f]??0),0);?><tr><td><?=$index+1?></td><?php foreach($columns as $f=>$label):?><td class="<?=$isNumber($f)?'text-end amount':''?>"><?=$isMoney($f)?money($row[$f]??null):e($row[$f]??'—')?></td><?php endforeach;?></tr><?php endforeach;?>
-<?php if($rows):?><tr class="report-subtotal"><td></td><?php foreach($columns as $f=>$label):?><td class="<?=$isNumber($f)?'text-end amount':''?>"><?php if($f==='nama'):?>Subtotal bagian<?php elseif($isNumber($f)):?><?=$isMoney($f)?money($groupTotals[$f]??'0'):e($groupTotals[$f]??'0')?><?php endif;?></td><?php endforeach;?></tr><?php endif;?></tbody><tfoot><tr><td></td><?php foreach($columns as $f=>$label):?><td class="<?=$isNumber($f)?'text-end amount':''?>"><?php if($f==='nama'):?>JUMLAH<?php elseif($isNumber($f)):?><?=$isMoney($f)?money($totals[$f]):e($totals[$f])?><?php endif;?></td><?php endforeach;?></tr></tfoot></table></div>
+<?php
+$groupTotals=[];$lastGroup=null;
+$totalCell=static function(string $field,array $values) use($isSummable,$isNumber,$isMoney): string {
+    if($isSummable($field))return $isMoney($field)?money($values[$field]??'0'):e($values[$field]??'0');
+    return $isNumber($field)?'—':'';
+};
+?>
+<div class="table-responsive"><table class="report-table">
+<thead><tr><th>No.</th><?php foreach($columns as $field=>$label):?>
+    <th data-field="<?=e($field)?>" class="<?=$isNumber($field)?'text-end':''?>"><?=e($label)?></th>
+<?php endforeach;?></tr></thead>
+<tbody>
+<?php foreach($rows as $index=>$row):$group=(string)($row['kd_bagian']??'');
+    if($lastGroup!==null && $group!==$lastGroup):?>
+    <tr class="report-subtotal"><td></td><?php foreach($columns as $field=>$label):?>
+        <td data-field="<?=e($field)?>" class="<?=$isNumber($field)?'text-end amount':''?>"><?=$field==='nama'?'Subtotal bagian':$totalCell($field,$groupTotals)?></td>
+    <?php endforeach;?></tr>
+    <?php $groupTotals=[];endif;
+    $lastGroup=$group;
+    foreach($totals as $field=>$total)$groupTotals[$field]=bcadd($groupTotals[$field]??'0',(string)($row[$field]??0),0);
+    ?>
+    <tr><td><?=$index+1?></td><?php foreach($columns as $field=>$label):?>
+        <td data-field="<?=e($field)?>" class="<?=$isNumber($field)?'text-end amount':''?>"><?=$isMoney($field)?money($row[$field]??null):e($row[$field]??'—')?></td>
+    <?php endforeach;?></tr>
+<?php endforeach;?>
+<?php if($rows):?>
+    <tr class="report-subtotal"><td></td><?php foreach($columns as $field=>$label):?>
+        <td data-field="<?=e($field)?>" class="<?=$isNumber($field)?'text-end amount':''?>"><?=$field==='nama'?'Subtotal bagian':$totalCell($field,$groupTotals)?></td>
+    <?php endforeach;?></tr>
+<?php endif;?>
+</tbody>
+<tfoot><tr><td></td><?php foreach($columns as $field=>$label):?>
+    <td data-field="<?=e($field)?>" class="<?=$isNumber($field)?'text-end amount':''?>"><?=$field==='nama'?'JUMLAH':$totalCell($field,$totals)?></td>
+<?php endforeach;?></tr></tfoot>
+</table></div>

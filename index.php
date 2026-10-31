@@ -8,9 +8,9 @@ $method=$_SERVER['REQUEST_METHOD']??'GET';
 if(!in_array($method,['GET','POST'],true)){http_response_code(405);header('Allow: GET, POST');exit;}
 if($path==='/setup'){(new AuthController())->setup();exit;}
 if($path==='/login'){(new AuthController())->login();exit;}
-if(empty($_SESSION['user'])){if(str_starts_with($path,'/api/'))json_response(['error'=>'Silakan masuk kembali.'],401);redirect('/login');}
+if(empty($_SESSION['user'])){if(expects_json())json_response(['error'=>'Silakan masuk kembali.'],401);redirect('/login');}
 $q=Database::connection()->prepare('SELECT session_version FROM app_users WHERE id=?');$q->execute([$_SESSION['user']['id']]);$version=$q->fetchColumn();
-if($version===false || (int)$version!==(int)$_SESSION['user']['session_version']){$_SESSION=[];redirect('/login');}
+if($version===false || (int)$version!==(int)$_SESSION['user']['session_version']){$_SESSION=[];if(expects_json())json_response(['error'=>'Sesi berakhir. Silakan masuk kembali.'],401);redirect('/login');}
 if($path==='/logout' && $method==='POST'){(new AuthController())->logout();exit;}
 if($path==='/profil'){(new AuthController())->profile();exit;}
 if($path==='/'){(new DashboardController())->index();exit;}

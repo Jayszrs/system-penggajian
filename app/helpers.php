@@ -18,7 +18,11 @@ function url(string $path = '', array $query = []): string {
     if ($base !== '' && $path !== $base && !str_starts_with($path, $base . '/') && !str_starts_with($path, $base . '?')) $path = $base . $path;
     return $path . ($query ? (str_contains($path, '?') ? '&' : '?') . http_build_query($query) : '');
 }
-function redirect(string $path): never { header('Location: ' . url($path), true, 303); exit; }
+function expects_json(): bool { return str_starts_with(app_request_path(),'/api/') || strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH']??'','XMLHttpRequest')===0; }
+function redirect(string $path): never {
+    if(($_SERVER['REQUEST_METHOD']??'GET')==='POST' && expects_json())json_response(['saved'=>true,'redirect'=>url($path)]);
+    header('Location: ' . url($path), true, 303); exit;
+}
 function csrf_token(): string { return $_SESSION['csrf'] ??= bin2hex(random_bytes(32)); }
 function csrf_field(): string { return '<input type="hidden" name="_csrf" value="' . e(csrf_token()) . '">'; }
 function flash(string $type, string $message): void { $_SESSION['flash'][] = compact('type', 'message'); }

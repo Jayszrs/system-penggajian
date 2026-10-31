@@ -65,5 +65,5 @@ $flashMessages=$_SESSION['flash']??[];unset($_SESSION['flash']);
 <?=$content?>
 <footer class="page-footer"><span>© <?=date('Y')?> Yayasan Mutiara Hikmah</span><span>Dikelola dengan cermat, untuk setiap penghasilan.</span></footer>
 </main></div>
-<script src="<?=e(url('public/assets/vendor/bootstrap.bundle.min.js'))?>" defer></script><script src="<?=e(url('public/assets/vendor/chart.umd.min.js'))?>" defer></script><script src="<?=e(url('public/assets/app.js',['v'=>(string)filemtime(BASE_PATH.'/public/assets/app.js')]))?>" defer></script>
+<script src="<?=e(url('public/assets/vendor/bootstrap.bundle.min.js'))?>" defer></script><script src="<?=e(url('public/assets/vendor/chart.umd.min.js'))?>" defer></script><?php require __DIR__.'/feedback.php'; ?><script src="<?=e(url('public/assets/feedback.js',['v'=>(string)filemtime(BASE_PATH.'/public/assets/feedback.js')]))?>" defer></script><script src="<?=e(url('public/assets/app.js',['v'=>(string)filemtime(BASE_PATH.'/public/assets/app.js')]))?>" defer></script>
 </body></html>
