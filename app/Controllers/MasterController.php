@@ -41,7 +41,9 @@ final class MasterController extends Controller {
         $where=$search!==''?' WHERE ('.implode(' OR ',array_map(static fn($c)=>"$c LIKE ?",$searchCols)).')':'';$params=$search!==''?array_fill(0,count($searchCols),'%'.$search.'%'):[];
         $q=$db->prepare("SELECT COUNT(*) FROM `$module` m $join $where");$q->execute($params);$total=(int)$q->fetchColumn();
         $q=$db->prepare("SELECT m.* $extra FROM `$module` m $join $where ORDER BY m.`{$meta['key']}` LIMIT 25 OFFSET $offset");$q->execute($params);
-        $this->view('master',['title'=>$meta['title'],'section'=>ucfirst($meta['group']),'module'=>$module,'meta'=>$meta,'rows'=>$q->fetchAll(),'total'=>$total,'page'=>$page,'search'=>$search,'edit'=>$edit,'error'=>$error,'showForm'=>$edit || isset($_GET['new']) || $error,'departments'=>$db->query('SELECT kd_bagian,nama_bagian FROM bagian ORDER BY kd_bagian')->fetchAll(),'employees'=>$db->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll()]);
+        $suggestionName=match(true){$module==='bagian'=>'m.nama_bagian',$module==='karyawan'=>'m.nama',$meta['key']==='nip'=>'k.nama',default=>'b.nama_bagian'};
+        $searchOptions=$db->query("SELECT m.`{$meta['key']}` AS code,$suggestionName AS name FROM `$module` m $join ORDER BY $suggestionName,m.`{$meta['key']}`")->fetchAll();
+        $this->view('master',['title'=>$meta['title'],'section'=>ucfirst($meta['group']),'module'=>$module,'meta'=>$meta,'rows'=>$q->fetchAll(),'total'=>$total,'page'=>$page,'search'=>$search,'edit'=>$edit,'error'=>$error,'searchOptions'=>$searchOptions,'showForm'=>$edit || isset($_GET['new']) || $error,'departments'=>$db->query('SELECT kd_bagian,nama_bagian FROM bagian ORDER BY kd_bagian')->fetchAll(),'employees'=>$db->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll()]);
     }
     private function find(string $table,int $id): array|false {$q=Database::connection()->prepare("SELECT * FROM `$table` WHERE id=? FOR UPDATE");$q->execute([$id]);return $q->fetch();}
 }

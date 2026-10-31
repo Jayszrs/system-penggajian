@@ -16,7 +16,7 @@ final class PayrollController extends Controller {
         $join=' FROM penghasilan p LEFT JOIN karyawan k ON k.nip=p.nip LEFT JOIN bagian b ON b.kd_bagian=COALESCE(p.department_code,k.kd_bagian)';
         $q=$db->prepare("SELECT COUNT(*) AS n,COALESCE(SUM(p.tpenghasilan),0) AS gross,COALESCE(SUM(p.tpotongan),0) AS deductions,COALESCE(SUM(p.tbersih),0) AS net $join WHERE $where");$q->execute($params);$summary=$q->fetch();
         $page=max(1,(int)($_GET['page']??1));$offset=($page-1)*25;$q=$db->prepare("SELECT p.*,COALESCE(p.employee_name,k.nama,p.nip) AS nama,COALESCE(p.department_name,b.nama_bagian,'—') AS nama_bagian $join WHERE $where ORDER BY p.nip,p.id LIMIT 25 OFFSET $offset");$q->execute($params);
-        $this->view('payroll-list',['title'=>'Transaksi Penghasilan','section'=>'Transaksi','period'=>$period,'departments'=>$repo->departments(),'rows'=>$q->fetchAll(),'page'=>$page,'search'=>$search,'summary'=>$summary,'error'=>$error]);
+        $this->view('payroll-list',['title'=>'Transaksi Penghasilan','section'=>'Transaksi','period'=>$period,'departments'=>$repo->departments(),'rows'=>$q->fetchAll(),'page'=>$page,'search'=>$search,'searchOptions'=>$db->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll(),'summary'=>$summary,'error'=>$error]);
     }
     public function form(): void {
         $db=Database::connection();$repo=new PayrollRepository();$id=max(0,(int)($_POST['id']??$_GET['id']??0));$before=$id?$repo->find($id):false;
@@ -41,7 +41,7 @@ final class PayrollController extends Controller {
             }catch(InvalidArgumentException $e){if($db->inTransaction())$db->rollBack();$error=$e->getMessage();}
             finally{if($lock){$q=$db->prepare('SELECT RELEASE_LOCK(?)');$q->execute([$lock]);}}
         }
-        $this->view('payroll-form',['title'=>$id?'Rincian Penghasilan':'Transaksi Baru','section'=>'Transaksi','values'=>$values,'id'=>$id,'error'=>$error,'mode'=>$mode,'departments'=>$repo->departments(),'employeeName'=>$before['nama']??$_POST['employee_name']??'','department'=>$before['kd_bagian']??$_POST['bagian']??$period['bagian'],'before'=>$before]);
+        $this->view('payroll-form',['title'=>$id?'Rincian Penghasilan':'Transaksi Baru','section'=>'Transaksi','values'=>$values,'id'=>$id,'error'=>$error,'mode'=>$mode,'departments'=>$repo->departments(),'employees'=>$db->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll(),'employeeName'=>$before['nama']??$_POST['employee_name']??'','department'=>$before['kd_bagian']??$_POST['bagian']??$period['bagian'],'before'=>$before]);
     }
     public function employees(): void {
         $search=mb_substr(trim((string)($_GET['q']??'')),0,100);$department=trim((string)($_GET['bagian']??''));$where='(k.nip LIKE ? OR k.nama LIKE ?)';$params=['%'.$search.'%','%'.$search.'%'];if($department!==''){$where.=' AND k.kd_bagian=?';$params[]=$department;}

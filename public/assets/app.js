@@ -53,6 +53,11 @@ document.querySelectorAll('[data-auto-submit]').forEach(input=>input.addEventLis
 document.querySelectorAll('[data-password-toggle]').forEach(button=>button.addEventListener('click',()=>{const input=document.getElementById(button.dataset.passwordToggle);input.type=input.type==='password'?'text':'password';button.textContent=input.type==='password'?'Lihat':'Sembunyikan';button.setAttribute('aria-label',input.type==='password'?'Tampilkan kata sandi':'Sembunyikan kata sandi');}));
 document.querySelectorAll('form[data-confirm]').forEach(form=>form.addEventListener('submit',event=>{if(!window.confirm(form.dataset.confirm))event.preventDefault();}));
 document.querySelectorAll('[data-print]').forEach(button=>button.addEventListener('click',()=>window.print()));
+window.addEventListener('beforeprint',()=>{
+ const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jakarta',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(part=>[part.type,part.value]));
+ const timestamp=`${parts.day}-${parts.month}-${parts.year}, ${parts.hour}:${parts.minute}:${parts.second} WIB`;
+ document.querySelectorAll('[data-print-timestamp]').forEach(element=>{element.textContent=timestamp;});
+});
 document.querySelectorAll('[data-report-range]').forEach(input=>input.addEventListener('change',()=>{document.querySelectorAll('[data-range-field]').forEach(field=>{field.hidden=!input.checked;field.querySelectorAll('input,select').forEach(i=>i.disabled=!input.checked);});}));
 const dropdownSync=new WeakMap();
 const syncDropdown=control=>dropdownSync.get(control)?.();
@@ -60,7 +65,7 @@ const syncDropdown=control=>dropdownSync.get(control)?.();
 if(window.bootstrap?.Dropdown){
  document.querySelectorAll('select:not([multiple]),input[list]').forEach((control,index)=>{
   const editable=control.matches('input');const options=Array.from(editable?control.list?.options??[]:control.options);
-  if(!options.length)return;
+  if(!editable&&!options.length)return;
   control.id||=`dropdown-${index}`;
   const fieldLabel=(control.labels?.[0]?.textContent??control.getAttribute('aria-label')??control.name).replace(/\*/g,'').trim();
   let wrapper=control.closest('.select-dropdown');
@@ -80,7 +85,7 @@ if(window.bootstrap?.Dropdown){
   if(month)menu.classList.add('period-month-menu');
   const label=toggle.querySelector('[data-selected-label]');
   if(label){label.id=control.id+'-selected';toggle.setAttribute('aria-describedby',label.id);}
-  const dropdown=bootstrap.Dropdown.getOrCreateInstance(toggle,{popperConfig:config=>({...config,strategy:'fixed',modifiers:[...config.modifiers,{name:'preventOverflow',options:{boundary:'viewport',padding:18}}]})});
+  const dropdown=bootstrap.Dropdown.getOrCreateInstance(toggle,{reference:editable?wrapper:'toggle',popperConfig:config=>({...config,strategy:'fixed',modifiers:[...config.modifiers,{name:'preventOverflow',options:{boundary:'viewport',padding:18}}]})});
   const entries=[];
   const sync=()=>{
    if(label)label.textContent=control.selectedOptions[0]?.textContent??'';
@@ -89,11 +94,13 @@ if(window.bootstrap?.Dropdown){
    if(control.disabled||control.validity.valid){wrapper.classList.remove('is-invalid');toggle.removeAttribute('aria-invalid');const feedback=wrapper.querySelector('.invalid-feedback');if(feedback){feedback.hidden=true;feedback.textContent='';}if(label)toggle.setAttribute('aria-describedby',label.id);else toggle.removeAttribute('aria-describedby');}
   };
   let search;
-  if(!month&&!editable&&options.length>8){
+  if(!month&&!editable&&(options.length>8||control.matches('[name="nip"],[name="bagian"],[name="kd_bagian"]'))){
    const row=document.createElement('li');row.className='select-dropdown-search';search=document.createElement('input');search.type='search';search.className='form-control';search.placeholder='Cari pilihan…';search.setAttribute('aria-label','Cari '+fieldLabel.toLowerCase());row.append(search);menu.append(row);
   }
+  let skipFocusOpen=false;
+  const focusControl=()=>{skipFocusOpen=true;(editable?control:toggle).focus();skipFocusOpen=false;};
   const choose=option=>{
-   const changed=control.value!==option.value;control.value=option.value;sync();dropdown.hide();(editable?control:toggle).focus();
+   const changed=control.value!==option.value;control.value=option.value;sync();dropdown.hide();focusControl();
    if(changed){control.dispatchEvent(new Event('input',{bubbles:true}));control.dispatchEvent(new Event('change',{bubbles:true}));}
   };
   for(const option of options){
@@ -102,19 +109,21 @@ if(window.bootstrap?.Dropdown){
   }
   const empty=document.createElement('li');empty.className='select-dropdown-empty';empty.textContent='Tidak ada pilihan yang sesuai.';empty.hidden=true;menu.append(empty);
   const filter=query=>{const text=query.toLocaleLowerCase('id').trim();let count=0;for(const {item,button}of entries){item.hidden=!button.textContent.toLocaleLowerCase('id').includes(text);if(!item.hidden)count++;}empty.hidden=count>0;dropdown.update();};
-  const focusOption=event=>{if(event.key==='ArrowDown'){event.preventDefault();event.stopPropagation();dropdown.show();entries.find(entry=>!entry.item.hidden&&!entry.button.disabled)?.button.focus();}};
+  const focusOption=event=>{if(event.key==='ArrowDown'&&!control.disabled&&!control.readOnly){event.preventDefault();event.stopPropagation();dropdown.show();entries.find(entry=>!entry.item.hidden&&!entry.button.disabled)?.button.focus();}};
   if(search){search.addEventListener('input',()=>filter(search.value));search.addEventListener('keydown',focusOption);search.addEventListener('click',event=>event.stopPropagation());}
   toggle.addEventListener('show.bs.dropdown',()=>{
    document.querySelectorAll('[data-select-toggle][aria-expanded="true"]').forEach(other=>{if(other!==toggle)bootstrap.Dropdown.getInstance(other)?.hide();});
    menu.style.width=Math.min(Math.max(wrapper.getBoundingClientRect().width,month?280:240),innerWidth-36)+'px';
-   if(search){search.value='';filter('');}else if(editable)filter(control.value);
+   if(search)search.value='';
+   filter('');
   });
   if(editable){
-   wrapper.classList.add('select-dropdown-editable');toggle.classList.add('select-dropdown-input-toggle');control.removeAttribute('list');control.setAttribute('autocomplete','off');
-   control.addEventListener('click',event=>{event.stopPropagation();dropdown.show();});
-   control.addEventListener('input',event=>{if(event.isTrusted){filter(control.value);dropdown.show();}});
+   wrapper.classList.add('select-dropdown-editable');toggle.classList.add('select-dropdown-input-toggle');control.removeAttribute('list');control.removeAttribute('maxlength');control.setAttribute('autocomplete','off');control.setAttribute('aria-controls',menu.id);control.setAttribute('aria-haspopup','true');
+   control.addEventListener('focus',()=>{if(!skipFocusOpen&&!control.disabled&&!control.readOnly)dropdown.show();});
+   control.addEventListener('click',event=>{event.stopPropagation();if(!control.disabled&&!control.readOnly)dropdown.show();});
+   control.addEventListener('input',event=>{if(event.isTrusted&&!control.readOnly&&!control.disabled){dropdown.show();filter(control.value);}});
    control.addEventListener('keydown',event=>{focusOption(event);if(event.key==='Escape'){event.preventDefault();dropdown.hide();}});
-   toggle.addEventListener('hidden.bs.dropdown',()=>{if(document.activeElement===toggle)control.focus();});
+   toggle.addEventListener('hidden.bs.dropdown',()=>{if(document.activeElement===toggle)focusControl();});
   }else{
    control.addEventListener('invalid',event=>{
     event.preventDefault();wrapper.classList.add('is-invalid');toggle.setAttribute('aria-invalid','true');

@@ -89,6 +89,19 @@
 .select-dropdown-editable>.select-dropdown-input-toggle{position:absolute;top:0;right:0;bottom:0;width:42px;min-height:0;border:0;background:transparent;padding:10px;justify-content:center}
 .select-dropdown-editable>.select-dropdown-input-toggle>.icon{margin:0}
 .period-month-dropdown>.select-dropdown-toggle{min-height:40px}
+:root{--sidebar-width:240px}
+.sidebar{width:var(--sidebar-width)}
+.nav-submenu a{white-space:normal;overflow-wrap:break-word;font-size:.7222rem;line-height:1.45}
+@media(min-width:761px){.app-main{margin-left:var(--sidebar-width)}}
+.uniform-filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));align-items:end;gap:18px}
+.uniform-filters .field,.uniform-filters .field.wide{width:auto;min-width:0;max-width:none;flex:initial}
+.uniform-filters .form-label{display:block;min-height:1.5em}
+.uniform-filters .form-control,.uniform-filters .form-select,.uniform-filters .select-dropdown-toggle,.uniform-filters>.btn{height:48px;min-height:48px;width:100%;margin:0}
+.uniform-filters .select-dropdown-editable>.select-dropdown-input-toggle{width:42px}
+.uniform-filters [data-selected-label]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+.search-form .select-dropdown-editable{flex:1;min-width:0}
+.search-form .select-dropdown-editable>.form-control{width:100%;padding-right:38px}
+.search-form .select-dropdown-editable>.select-dropdown-input-toggle{width:32px;padding:6px}
 /* Clear text hierarchy across light surfaces and dark panels. */
 @media screen{
  :root{--text-secondary:#3f5d4b;--muted:#5b7165;--placeholder:#64766c;--control-border:#bccdc2;--bs-secondary-color:#5b7165;--bs-secondary-color-rgb:91,113,101}
@@ -137,4 +150,53 @@
  .auth-form-icon{color:#3d673d}
  [data-number-format]{font-variant-numeric:tabular-nums}
 }
-@media print{@page{size:A4 landscape;margin:12mm}body{background:#fff!important;color:#111;font-size:10pt}.skip-link,.sidebar-overlay,.sidebar,.topbar,.page-heading,.page-footer,.report-types,.filter-bar,.report-toolbar,.alert,.no-print,.detailed-screen{display:none!important}.print-only{display:block}.print-report-section{break-before:page}.print-report-section:first-child{break-before:auto}.print-report-section h3{font-size:12pt;margin:0 0 6px}.print-report-section>p{font-size:9pt;margin-bottom:12px}.app-main{margin:0}.main-content{padding:0;max-width:none}.surface,.report-surface{border:0;border-radius:0;box-shadow:none;margin:0}.report-document{padding:0}.report-title{padding:0 0 15px}.table-responsive{overflow:visible!important}.report-table{font-size:7pt;width:100%;page-break-inside:auto}.report-table th,.report-table td{padding:5px;color:#111;white-space:normal}.report-table .amount{font-size:7pt;white-space:nowrap}thead{display:table-header-group}tfoot{display:table-row-group}tr{break-inside:avoid;page-break-inside:avoid}.slip{break-inside:avoid;page-break-inside:avoid;border-radius:0;margin:0 0 15px;padding:15px}.slip,.report-table{-webkit-print-color-adjust:exact;print-color-adjust:exact}.slip-header strong,.slip-header h2{color:#111}.slip-line{font-size:9pt}.slip-signatures{margin-top:15px}.slip-signatures p{margin-top:35px}.slip-net strong{font-size:17pt}.slips-document{max-width:190mm;margin:0 auto}.slips-document .slip{page-break-after:always}.slips-document .slip:last-child{page-break-after:auto}}
+/* Shared document typography and the legacy A5 payslip. */
+.report-print-heading{display:none}
+.print-document-heading{text-align:center;font-family:"Times New Roman",Times,serif;color:#000;padding-bottom:4mm}
+.print-document-heading h2{font:700 13pt "Times New Roman",Times,serif;margin:0 0 2mm;color:#000}
+.print-document-heading p{font-size:10pt;line-height:1.35;margin:1mm 0;color:#000}
+.print-document-heading .print-document-meta{font-size:9pt}
+.legacy-report-footer{font:10pt "Times New Roman",Times,serif;color:#000;margin:4mm 0 0}
+.slips-document{overflow-x:auto}
+.legacy-slip.slip{width:194mm;max-width:none;box-sizing:border-box;margin:0 auto 6mm;padding:4mm 7mm;background:#fff;border:1px solid #bbb;border-radius:0;color:#000;font:10pt/1.25 "Times New Roman",Times,serif}
+.legacy-slip-title{font:700 11pt "Times New Roman",Times,serif;text-align:center;margin:0 0 4mm;color:#000}
+.legacy-slip .slip-identity{display:block;margin:0;font:inherit;color:#000}
+.legacy-identity-row{display:grid;grid-template-columns:30mm 3mm minmax(0,1fr);min-height:5mm;overflow-wrap:anywhere}
+.legacy-slip-attendance{display:grid;grid-template-columns:1.15fr 1fr 1.25fr;gap:2mm;align-items:end;padding:1mm 0}
+.legacy-slip-components{table-layout:fixed;width:100%;border-collapse:collapse;font:inherit;color:#000}
+.slip-label-col{width:24%}.slip-colon-col{width:1%}.slip-currency-col{width:3%}.slip-amount-col{width:22%}
+.legacy-slip-components th{border-top:.5pt solid #000;border-bottom:.5pt solid #000;text-align:center;font-size:11pt;font-weight:400;padding:.8mm 0}
+.legacy-slip-components td{height:4.2mm;line-height:1.05;padding:.15mm 0;vertical-align:top;overflow-wrap:anywhere}
+.legacy-slip-components td:nth-child(5){padding-left:5mm}
+.legacy-slip-components .legacy-slip-amount{text-align:right;font-size:9pt;white-space:nowrap;overflow-wrap:normal}
+.legacy-slip-components tfoot tr:first-child td{border-top:.5pt solid #000;padding-top:1.5mm}
+.legacy-slip-net td{padding-bottom:1.5mm}
+.legacy-slip-signatures{display:grid;grid-template-columns:1fr 1fr;text-align:center;border-top:.5pt solid #000;padding-top:1mm;gap:8mm;overflow-wrap:anywhere}
+.legacy-slip-accounting{padding-top:5mm}
+.legacy-slip-issued{font-size:9pt;margin-bottom:1mm}
+.legacy-signature-space{height:7mm}
+@media print{
+ @page{size:A4 landscape;margin:12mm}
+ html,body{background:#fff!important;color:#000!important}
+ body{font:10pt "Times New Roman",Times,serif}
+ .skip-link,.sidebar-overlay,.sidebar,.topbar,.page-heading,.page-footer,.report-types,.filter-bar,.report-toolbar,.alert,.no-print,.detailed-screen{display:none!important}
+ .app-main{margin:0!important}.main-content{padding:0;max-width:none}
+ .surface,.report-surface{border:0;border-radius:0;box-shadow:none;margin:0}
+ .report-document{padding:0;color:#000;font-family:"Times New Roman",Times,serif}
+ .report-title{display:none}
+ .print-only{display:block}
+ .report-print-heading{display:table-row}
+ .report-table{width:100%;border-collapse:collapse;font:8pt "Times New Roman",Times,serif;color:#000}
+ .report-table th,.report-table td{padding:1.3mm;border:.5pt solid #000;background:#fff!important;color:#000!important;white-space:normal}
+ .report-table .amount{font-size:8pt;white-space:nowrap}
+ .report-table .report-print-heading>th{border:0;padding:0 0 3mm}
+ .report-subtotal td,.report-table tfoot td{font-weight:700}
+ .table-responsive{overflow:visible!important}
+ thead{display:table-header-group}tfoot{display:table-row-group}
+ tr{break-inside:avoid;page-break-inside:avoid}
+ .print-report-section{break-before:page}.print-report-section:first-child{break-before:auto}
+ .slips-document{overflow:visible;max-width:none;margin:0}
+ .legacy-slip.slip{width:100%;margin:0;padding:2mm 7mm 0;border:0;break-inside:avoid;page-break-inside:avoid;break-after:page;page-break-after:always}
+ .legacy-slip.slip:last-child{break-after:auto;page-break-after:auto}
+ .legacy-slip-components thead{display:table-row-group}
+}
