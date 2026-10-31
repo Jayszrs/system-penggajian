@@ -1,8 +1,24 @@
 <?php
 declare(strict_types=1);
 function e(mixed $value): string { return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
-function url(string $path = '', array $query = []): string { return '/' . ltrim($path, '/') . ($query ? '?' . http_build_query($query) : ''); }
-function redirect(string $path): never { header('Location: ' . $path, true, 303); exit; }
+function app_base_path(): string {
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');
+    return str_ends_with($script, '/index.php') ? rtrim(substr($script, 0, -10), '/') : '';
+}
+function app_request_path(): string {
+    $path = rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/');
+    $base = app_base_path();
+    if ($base !== '' && ($path === $base || str_starts_with($path, $base . '/'))) $path = substr($path, strlen($base));
+    $path = rtrim($path, '/') ?: '/';
+    return $path === '/index.php' ? '/' : $path;
+}
+function url(string $path = '', array $query = []): string {
+    $base = app_base_path();
+    $path = '/' . ltrim($path, '/');
+    if ($base !== '' && $path !== $base && !str_starts_with($path, $base . '/') && !str_starts_with($path, $base . '?')) $path = $base . $path;
+    return $path . ($query ? (str_contains($path, '?') ? '&' : '?') . http_build_query($query) : '');
+}
+function redirect(string $path): never { header('Location: ' . url($path), true, 303); exit; }
 function csrf_token(): string { return $_SESSION['csrf'] ??= bin2hex(random_bytes(32)); }
 function csrf_field(): string { return '<input type="hidden" name="_csrf" value="' . e(csrf_token()) . '">'; }
 function flash(string $type, string $message): void { $_SESSION['flash'][] = compact('type', 'message'); }

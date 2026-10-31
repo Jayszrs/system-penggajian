@@ -9,7 +9,7 @@ abstract class Controller {
     }
     protected function validateCsrf(): void {
         if (!hash_equals($_SESSION['csrf'] ?? '', (string) ($_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')) || empty($_SESSION['csrf'])) {
-            if (str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/api/')) json_response(['error'=>'Sesi formulir berakhir. Muat ulang halaman.'],419);
+            if (str_starts_with(app_request_path(), '/api/')) json_response(['error'=>'Sesi formulir berakhir. Muat ulang halaman.'],419);
             http_response_code(419); $this->view('error', ['errorMessage'=>'Sesi formulir berakhir. Muat ulang halaman lalu coba lagi.'], false); exit;
         }
     }

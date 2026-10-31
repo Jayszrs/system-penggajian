@@ -23,7 +23,7 @@ set_exception_handler(static function (Throwable $e): void {
     $id = bin2hex(random_bytes(4));
     error_log(date('c') . " [$id] " . $e . PHP_EOL, 3, BASE_PATH . '/storage/app.log');
     http_response_code(500);
-    if (str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/api/')) {
+    if (str_starts_with(app_request_path(), '/api/')) {
         header('Content-Type: application/json'); echo json_encode(['error'=>'Permintaan belum berhasil. Silakan coba kembali.','reference'=>$id]); return;
     }
     $errorMessage = 'Aplikasi belum dapat memproses permintaan. Periksa koneksi database atau hubungi pengelola.';
@@ -35,6 +35,6 @@ if (PHP_SAPI !== 'cli') {
     header('Cache-Control: no-store');
     header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
     session_name('mh_payroll');
-    session_set_cookie_params(['httponly'=>true,'samesite'=>'Lax','secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']!=='off','path'=>'/']);
+    session_set_cookie_params(['httponly'=>true,'samesite'=>'Lax','secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']!=='off','path'=>app_base_path().'/']);
     session_start();
 }

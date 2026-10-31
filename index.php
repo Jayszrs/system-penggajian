@@ -3,7 +3,7 @@ declare(strict_types=1);
 require __DIR__.'/app/bootstrap.php';
 use App\Core\Database;
 use App\Controllers\{AuthController,DashboardController,MasterController,PayrollController,ReportController};
-$path=rawurldecode(parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)??'/');$path=rtrim($path,'/')?:'/';
+$path=app_request_path();
 $method=$_SERVER['REQUEST_METHOD']??'GET';
 if(!in_array($method,['GET','POST'],true)){http_response_code(405);header('Allow: GET, POST');exit;}
 if($path==='/setup'){(new AuthController())->setup();exit;}

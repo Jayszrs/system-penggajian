@@ -5,7 +5,7 @@ Aplikasi penggajian lokal berbasis PHP MVC, PDO, MySQL 8, Bootstrap 5.3.8, dan C
 ## Membuka aplikasi
 
 1. Jalankan Apache dan MySQL pada Laragon.
-2. Buka **http://system-penggajian.test**.
+2. Buka **http://system-penggajian.test**. Akses melalui **http://localhost/system-penggajian/** juga didukung; rute, aset, dan endpoint API mengikuti folder aplikasi secara otomatis.
 3. Pada penggunaan pertama, buat nama, ID pengguna, dan kata sandi minimal 12 karakter. Aplikasi tidak menyediakan kredensial bawaan.
 4. Masuk. Periode awal mengikuti transaksi terbaru yang tersedia pada database; tanpa transaksi aplikasi menampilkan keadaan kosong.
 
@@ -93,6 +93,8 @@ npm run test:browser
 ```
 
 Suite browser memakai Chrome yang terpasang pada Windows. Suite membuat ulang **hanya** database `penggajian_test`; reset ditolak jika ditemukan akun selain akun QA. Jangan menggunakan nama ini untuk data kerja. Gambar hasil QA dan contoh PDF berada di `storage/qa/` dan tidak bisa diakses lewat HTTP.
+
+Setelah suite browser selesai, jalankan `node tests/laragon-routing.js` untuk memeriksa akses dari akar domain dan subfolder seperti `localhost/system-penggajian/`. Pengujian ini menjalankan server PHP sementara dengan database `penggajian_test`, memeriksa login, aset, navigasi, formulir, API, CSRF, arsip terlindungi, serta logout, kemudian menghentikan server tersebut.
 
 ## Dokumen teknis dan batas verifikasi
 

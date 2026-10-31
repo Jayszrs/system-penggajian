@@ -53,6 +53,12 @@ Enam skenario end-to-end mencakup:
 
 Hasil akhir suite: **6 skenario lolos**. Gambar desktop/ponsel disimpan di `storage/qa/`; data uji dipisahkan dari database aplikasi utama.
 
+## Akses Laragon melalui domain dan subfolder
+
+Pengalihan login, tautan halaman, aset lokal, formulir, dan endpoint JSON mengikuti lokasi aplikasi secara otomatis. Akses Apache pada `http://system-penggajian.test/` serta `http://localhost/system-penggajian/` telah diperiksa: keduanya mengarah ke halaman login yang benar dengan HTTP 200. Endpoint tanpa sesi mengembalikan JSON 401 dan ekspor database terlindungi dengan HTTP 403.
+
+`node tests/laragon-routing.js` lolos pada dua konfigurasi server terisolasi: akar domain dan subfolder. Pengujian mencakup masuk, aset tanpa 404, navigasi, identitas/menu aktif, pencarian karyawan, pratinjau perhitungan, formulir master dan pembatalan, laporan, penolakan CSRF dalam JSON, perlindungan arsip, dan keluar akun. Enam skenario browser utama serta 1.835 pemeriksaan data dan kalkulasi juga tetap lolos.
+
 ## Pemeriksaan PDF
 
 Cetak seluruh komponen dibagi menjadi empat bagian: penghasilan, potongan, kehadiran/jumlah kegiatan, dan ringkasan. Setiap bagian mencantumkan identitas, periode, subtotal bagian, serta total. Tabel layar tetap menyediakan seluruh kolom dengan gulir horizontal.
