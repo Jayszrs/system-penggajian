@@ -16,3 +16,7 @@
 *.ldf
 .DS_Store
 Thumbs.db
+/.mimosa/
+/.v2c/
+/database/*.sql
+!/database/schema.sql

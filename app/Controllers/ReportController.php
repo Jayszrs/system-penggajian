@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 use App\Core\{Controller,Database};
 use App\Services\PayrollRepository;
-use App\Domain\{PayrollFields,PayrollPeriod,PayrollValidationException};
+use App\Domain\{PayrollFields,PayrollPeriod,PayrollValidationException,PrintLayout};
 final class ReportController extends Controller {
     public const TYPES=['slip_karyawan'=>'Slip per Karyawan','slip_bagian'=>'Slip per Bagian','rekap_bagian'=>'Rekap Gaji per Bagian','rekap_periode'=>'Rekap Rentang Periode','rekap_periode_bagian'=>'Rekap Periode per Bagian','absensi'=>'Rekap Absensi','gapok'=>'Rekap Gaji Pokok'];
     public function index(): void {
@@ -47,6 +47,7 @@ final class ReportController extends Controller {
         $rangeLabel=$isRange?month_name($startMonth).' '.$startYear.' – '.month_name($endMonth).' '.$endYear:month_name($period['bulan']).' '.$period['tahun'];
         $employees=$db->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll();
         $detailed=!$isSlip&&!in_array($type,['gapok','absensi'],true)&&($_GET['rincian']??'')==='1';
-        $this->view('reports',['title'=>'Slip & Laporan','section'=>'Laporan','types'=>self::TYPES,'type'=>$type,'reportTitle'=>self::TYPES[$type],'period'=>$period,'isRange'=>$isRange,'isSlip'=>$isSlip,'employeeScope'=>$employeeScope,'scope'=>$scope,'nip'=>$nip,'startMonth'=>$startMonth,'startYear'=>$startYear,'endMonth'=>$endMonth,'endYear'=>$endYear,'error'=>$error,'view'=>$view,'rows'=>$rows,'totals'=>$totals,'rangeLabel'=>$rangeLabel,'departments'=>$repo->departments(),'employees'=>$employees,'detailed'=>$detailed]);
+        $print=PrintLayout::metadata((string)$_SESSION['user']['name']);
+        $this->view('reports',['print'=>$print,'title'=>'Slip & Laporan','section'=>'Laporan','types'=>self::TYPES,'type'=>$type,'reportTitle'=>self::TYPES[$type],'period'=>$period,'isRange'=>$isRange,'isSlip'=>$isSlip,'employeeScope'=>$employeeScope,'scope'=>$scope,'nip'=>$nip,'startMonth'=>$startMonth,'startYear'=>$startYear,'endMonth'=>$endMonth,'endYear'=>$endYear,'error'=>$error,'view'=>$view,'rows'=>$rows,'totals'=>$totals,'rangeLabel'=>$rangeLabel,'departments'=>$repo->departments(),'employees'=>$employees,'detailed'=>$detailed]);
     }
 }

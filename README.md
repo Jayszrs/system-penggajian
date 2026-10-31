@@ -92,6 +92,16 @@ Kesalahan masukan memblokir simpan. Peringatan, seperti kehadiran belum lengkap,
 
 ## Pengujian
 
+### Format cetak
+
+Slip karyawan dan slip per bagian menggunakan desain klasik dengan kertas **A5 landscape**, margin 8 mm, satu transaksi per lembar. Semua pintasan slip pada Penggajian menggunakan template yang sama. Nama Accounting mengikuti nama lengkap akun yang mencetak; lokasi default Tambun dapat disesuaikan melalui `App\Domain\PrintLayout::LOCATION`. Tanggal dan jam diperbarui saat mencetak dengan zona waktu **WIB**, termasuk melalui Ctrl+P.
+
+Rekap tetap memakai **A4 landscape**. Judul, periode, nama petugas, jam cetak, dan kepala tabel diulang pada halaman lanjutan. Rincian lengkap tetap dipisah menjadi penghasilan, potongan, kehadiran, dan ringkasan. Pada dialog cetak Chrome, gunakan skala **100%**, ukuran kertas sesuai dokumen, dan nonaktifkan header/footer bawaan browser.
+
+Jalankan `npm run test:print` dari terminal Laragon untuk memeriksa tujuh laporan dan kedua pintasan slip. Pengujian ini membuat database sementara dengan nama acak `penggajian_print_test_*`, hanya berisi fixture sintetis, lalu menghapusnya setelah selesai. PDF uji disimpan di `storage/qa/print/`. Pemeriksaan ukuran kertas, jumlah halaman, pengulangan judul, kelengkapan teks, serta gambar hasil render dapat dijalankan dengan `python tests/verify-print-pdfs.py` setelah paket Python `pymupdf` tersedia. Pengujian cetak tidak memerlukan backup SQL Server dan tidak mengubah database aplikasi utama.
+
+### Pengujian perhitungan dan browser
+
 ```powershell
 php tests/run.php
 php tests/calculator-accounting.php

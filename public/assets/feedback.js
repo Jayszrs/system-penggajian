@@ -32,7 +32,9 @@ document.addEventListener('DOMContentLoaded', function () {
    const first=event.severity==='error'?(event.issues||[]).find(issue=>issue.field):null;
    const field=first?document.querySelector('[name="'+CSS.escape(first.field)+'"]'):null;
    const target=field?.hidden?document.getElementById(field.id+'-toggle'):field;
-   if(target&&!target.disabled)target.focus();else if(previous?.isConnected)previous.focus();
+   if(dialog.contains(document.activeElement)||document.activeElement===document.body){
+    if(target&&!target.disabled)target.focus();else if(previous?.isConnected)previous.focus();
+   }
    item.resolve(accepted);runQueue();
   },{once:true});
   modal.show();

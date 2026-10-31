@@ -5,7 +5,7 @@ if(!empty($feedback))$feedbackEvents[]=$feedback;
 elseif(!empty($error))$feedbackEvents[]=['severity'=>'error','title'=>'Data belum dapat diproses','message'=>$error];
 elseif(!empty($errorMessage))$feedbackEvents[]=['severity'=>'error','title'=>'Permintaan belum berhasil','message'=>$errorMessage];
 ?>
-<div class="modal fade feedback-modal" id="feedback-modal" tabindex="-1" aria-labelledby="feedback-title" aria-describedby="feedback-message" aria-hidden="true">
+<div class="modal feedback-modal" id="feedback-modal" tabindex="-1" aria-labelledby="feedback-title" aria-describedby="feedback-message" aria-hidden="true">
  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
   <div class="modal-header border-0 pb-0"><span class="feedback-symbol" data-feedback-symbol><?=icon('info')?></span><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup pemberitahuan"></button></div>
   <div class="modal-body"><h2 class="modal-title mb-3" id="feedback-title">Pemberitahuan</h2><p class="feedback-message mb-0" id="feedback-message"></p><ul class="feedback-issues mt-3 mb-0" data-feedback-issues hidden></ul></div>

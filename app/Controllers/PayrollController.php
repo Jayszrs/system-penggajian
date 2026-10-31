@@ -40,7 +40,7 @@ final class PayrollController extends Controller
         $statement = $db->prepare("SELECT COUNT(*) AS n,COALESCE(SUM(p.tpenghasilan),0) AS gross,COALESCE(SUM(p.tpotongan),0) AS deductions,COALESCE(SUM(p.tbersih),0) AS net $join WHERE $where"); $statement->execute($params); $summary = $statement->fetch();
         $page = max(1, min(1000000, is_scalar($_GET['page'] ?? 1) ? (int)($_GET['page'] ?? 1) : 1)); $offset = ($page - 1) * 25;
         $statement = $db->prepare("SELECT p.*,$employeeName AS nama,$departmentName AS nama_bagian $join WHERE $where ORDER BY p.nip,p.id LIMIT 25 OFFSET $offset"); $statement->execute($params);
-        $this->view('payroll-list', ['title' => 'Transaksi Penghasilan', 'section' => 'Transaksi', 'period' => $period, 'departments' => $repo->departments(), 'rows' => $statement->fetchAll(), 'page' => $page, 'search' => $search, 'summary' => $summary, 'error' => $error]);
+        $this->view('payroll-list', ['title' => 'Transaksi Penghasilan', 'section' => 'Transaksi', 'period' => $period, 'departments' => $repo->departments(), 'rows' => $statement->fetchAll(), 'page' => $page, 'search' => $search, 'searchOptions' => $db->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll(), 'summary' => $summary, 'error' => $error]);
     }
 
     public function form(): void
@@ -90,7 +90,7 @@ final class PayrollController extends Controller
         $this->view('payroll-form', [
             'title' => $id ? 'Rincian Penghasilan' : 'Transaksi Baru', 'section' => 'Transaksi', 'values' => $values,
             'id' => $id, 'error' => $error, 'feedback' => $feedback, 'confirmationToken' => $confirmationToken, 'warningsAccepted' => $warningsAccepted,
-            'mode' => $mode, 'departments' => $repo->departments(), 'employeeName' => $before['nama'] ?? ($values['employee_name'] ?? ''),
+            'mode' => $mode, 'departments' => $repo->departments(), 'employees' => Database::connection()->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll(), 'employeeName' => $before['nama'] ?? ($values['employee_name'] ?? ''),
             'department' => $before['kd_bagian'] ?? ($values['bagian'] ?? $period['bagian']), 'before' => $before,
         ]);
     }

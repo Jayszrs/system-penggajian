@@ -6,7 +6,7 @@ $totalCell=static function(string $field,array $values) use($isSummable,$isNumbe
 };
 ?>
 <div class="table-responsive"><table class="report-table">
-<thead><tr><th>No.</th><?php foreach($columns as $field=>$label):?>
+<thead><tr class="report-print-heading"><th colspan="<?=count($columns)+1?>"><?php require __DIR__.'/print-heading.php'; ?></th></tr><tr><th>No.</th><?php foreach($columns as $field=>$label):?>
     <th data-field="<?=e($field)?>" class="<?=$isNumber($field)?'text-end':''?>"><?=e($label)?></th>
 <?php endforeach;?></tr></thead>
 <tbody>

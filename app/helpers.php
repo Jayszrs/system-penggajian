@@ -20,8 +20,11 @@ function url(string $path = '', array $query = []): string {
 }
 function expects_json(): bool { return str_starts_with(app_request_path(),'/api/') || strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH']??'','XMLHttpRequest')===0; }
 function redirect(string $path): never {
-    if(($_SERVER['REQUEST_METHOD']??'GET')==='POST' && expects_json())json_response(['saved'=>true,'redirect'=>url($path)]);
-    header('Location: ' . url($path), true, 303); exit;
+    $target = url(str_replace(['\\', "\r", "\n", "\0"], '/', $path));
+    if (!str_starts_with($target, '/') || str_starts_with($target, '//') || str_contains($target, '://')) $target = '/';
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && expects_json()) json_response(['saved' => true, 'redirect' => $target]);
+    header("Location: $target", true, 303);
+    exit;
 }
 function csrf_token(): string { return $_SESSION['csrf'] ??= bin2hex(random_bytes(32)); }
 function csrf_field(): string { return '<input type="hidden" name="_csrf" value="' . e(csrf_token()) . '">'; }

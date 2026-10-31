@@ -36,9 +36,9 @@ $employees=[];$departments=[];
 foreach($export['tables'] as $t){if(strtolower($t['name'])==='karyawan')foreach($t['rows'] as $r)$employees[rtrim($r['nip']??'',' ')]=$r;if(strtolower($t['name'])==='bagian')foreach($t['rows'] as $r)$departments[rtrim($r['kd_bagian']??'',' ')]=$r;}
 // Preserve every extra source column. Original identity columns use legacy_id;
 // the application's id is a separate surrogate, never a replacement of source data.
-foreach($export['tables'] as $table){$target=strtolower($table['name']);if(!isset($operational[$target]))continue;
+foreach($export['tables'] as $table){$target=strtolower($table['name']);if(!isset($operational[$target]))continue;if(!preg_match('/^[a-z0-9_]+$/',$target))throw new RuntimeException('Nama tabel sumber tidak didukung.');
     $available=$db->query("SHOW COLUMNS FROM `$target`")->fetchAll(PDO::FETCH_COLUMN);
-    foreach($table['columns'] as $column){$name=strtolower($column['name']);$mapped=$name==='id'?'legacy_id':$name;if(!preg_match('/^[a-z0-9_]+$/',$mapped))throw new RuntimeException('Nama kolom sumber tidak didukung.');if(!in_array($mapped,$available,true))$db->exec("ALTER TABLE `$target` ADD COLUMN `$mapped` ".mysql_type($column).' NULL');}
+    foreach($table['columns'] as $column){$name=strtolower($column['name']);$mapped=$name==='id'?'legacy_id':$name;if(!preg_match('/^[a-z0-9_]+$/',$mapped))throw new RuntimeException('Nama kolom sumber tidak didukung.');if(!in_array($mapped,$available,true))$db->query("ALTER TABLE `$target` ADD COLUMN `$mapped` ".mysql_type($column).' NULL');}
 }
 $db->beginTransaction();
 try {
@@ -50,7 +50,7 @@ try {
             $payload=canonical($row);$digest=hash('sha256',$payload);$archiveInsert->execute([$name,$index+1,$payload,$digest]);$digests[]=$digest;$rawRows++;
             if(isset($operational[$target])){
                 $mapped=[];
-                foreach($table['columns'] as $column){$field=strtolower($column['name']);$mapped[$field==='id'?'legacy_id':$field]=source_value($row[$column['name']],$column);}
+                foreach($table['columns'] as $column){$field=strtolower($column['name']);if(!preg_match('/^[a-z0-9_]+$/',$field))throw new RuntimeException('Nama kolom sumber tidak didukung.');$mapped[$field==='id'?'legacy_id':$field]=source_value($row[$column['name']],$column);}
                 if($target==='penghasilan'){$employee=$employees[$mapped['nip']]??null;$dept=$employee?$departments[rtrim($employee['kd_bagian'],' ')]??null:null;$extra=['source'=>'legacy','employee_name'=>$employee?rtrim($employee['nama'],' '):null,'department_code'=>$employee?rtrim($employee['kd_bagian'],' '):null,'department_name'=>$dept?rtrim($dept['nama_bagian'],' '):null];}else $extra=[];
                 $insert=[...$mapped,...$extra];$q=$db->prepare("INSERT INTO `$target` (`".implode('`,`',array_keys($insert)).'`) VALUES('.implode(',',array_fill(0,count($insert),'?')).')');$q->execute(array_values($insert));$id=(int)$db->lastInsertId();
                 $q=$db->prepare("SELECT `".implode('`,`',array_keys($mapped))."` FROM `$target` WHERE id=?");$q->execute([$id]);$actual=$q->fetch();

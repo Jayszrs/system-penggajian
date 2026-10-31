@@ -73,9 +73,12 @@ try{
             $xpath=reportRender(['type'=>$type,...$period]);
             if(str_starts_with($type,'slip')){
                 $slips=$xpath->query('//article[contains(@class,"slip")]');reportCheck($slips->length===count($rows),'slip count');$byNip=[];foreach($rows as $row)$byNip[$row['nip']]=$row;
-                foreach($slips as $slip){$nip=trim($xpath->query('.//div[@class="slip-identity"]/p[span="NIP"]/strong',$slip)->item(0)->textContent);reportCheck(isset($byNip[$nip]),'slip scope');$row=$byNip[$nip];
-                    foreach([PayrollFields::INCOME,PayrollFields::DEDUCTIONS] as $index=>$fields){$section=$xpath->query('./div[@class="slip-columns"]/section',$slip)->item($index);$lines=$xpath->query('./div[contains(@class,"slip-line")]/strong',$section);$fieldKeys=[...array_keys($fields),$index===0?'tpenghasilan':'tpotongan'];foreach($fieldKeys as $line=>$field)reportCheck(trim($lines->item($line)->textContent)===reportMoney($row[$field]),'slip component '.$field);}
-                    reportCheck(trim($xpath->query('./div[@class="slip-net"]/strong',$slip)->item(0)->textContent)===reportMoney($row['tbersih']),'slip net');
+                foreach($slips as $slip){$nip=$slip->getAttribute('data-slip-nip');reportCheck(isset($byNip[$nip]),'slip scope');$row=$byNip[$nip];
+                    foreach([...array_keys(PayrollFields::INCOME),...array_keys(PayrollFields::DEDUCTIONS),...array_keys(PayrollFields::TOTALS)] as $field){
+                        $amount=$xpath->query('.//*[@data-slip-field="'.$field.'"]',$slip)->item(0);
+                        $expected=preg_replace('/^(-?)Rp /','$1',reportMoney($row[$field]));
+                        reportCheck(trim($amount?->textContent??'')===$expected,'slip component '.$field);
+                    }
                 }
             }else{reportTableCheck($xpath,$xpath->query('//table[contains(@class,"report-table")]')->item(0),$rows,false);}
             $cases++;
