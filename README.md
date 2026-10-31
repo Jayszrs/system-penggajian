@@ -23,6 +23,12 @@ php scripts/install.php
 
 Gunakan nama database kosong yang khusus untuk aplikasi ini. Installer membuat tabel yang belum ada dan tidak menghapus tabel atau data yang sudah tersedia. Arahkan virtual host ke direktori proyek; `.htaccess` melindungi source, konfigurasi, arsip, skrip, dan dokumentasi dari HTTP. Untuk jaringan kantor, arahkan akses ke komputer Laragon tersebut sesuai pengaturan jaringan setempat.
 
+### Launcher lokal Windows
+
+Setelah `.env` dan database disiapkan, aktifkan MySQL di Laragon lalu klik dua kali `JALANKAN.bat`. Launcher membuka **http://127.0.0.1:8018** dan menjalankan server PHP di latar belakang. Apache tidak diperlukan untuk alamat ini; akses hanya tersedia dari komputer yang menjalankan launcher.
+
+PHP ditemukan dari PATH terminal atau folder `bin/php` Laragon relatif terhadap lokasi proyek. Untuk lokasi PHP lain, jalankan `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-local.ps1 -PhpPath "C:\lokasi\php.exe" -OpenBrowser`. Launcher tidak mengimpor atau mereset database. Setelah komputer dihidupkan ulang, aktifkan MySQL dan klik launcher lagi. Log server tersedia di `storage/php-local.error.log`.
+
 ## Migrasi ulang dari backup SQL Server
 
 Backup sumber adalah native SQL Server 2008 R2 (`10.50`), dengan nama database `gaji_bmt`. `gaji.exe` menyebut katalog `gaji`; aplikasi baru memakai data backup yang diberikan.
