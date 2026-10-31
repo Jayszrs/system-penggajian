@@ -170,4 +170,29 @@ test.describe.serial('Accounting validation, confirmation and feedback',()=>{
    await expect(modal(page)).toBeVisible();await dismissFeedback(page);
   }
  });
+
+ test('stored rate snapshots and explicit recalculation keep persisted amounts until save',async({page})=>{
+  await page.goto(`/transaksi?bulan=10&tahun=2026&bagian=${QA_DEPARTMENT}&q=${QA_NIP}`);
+  await page.getByRole('link',{name:`Ubah transaksi ${QA_NIP}`,exact:true}).click();
+  await page.getByText('Dasar perhitungan dan sumber tarif',{exact:true}).click();
+  await expect(page.locator('#rate-sources')).toContainText('Sumber tarif saat transaksi disimpan');
+  await expect(page.locator('#rate-sources')).toContainText('Rp 20.000');
+  let writes=0;page.on('request',request=>{if(new URL(request.url()).pathname==='/transaksi/form'&&request.method()==='POST')writes++;});
+  for(const width of [1600,390]){
+   await page.setViewportSize({width,height:844});
+   await page.getByRole('button',{name:'Muat komponen master',exact:true}).click();
+   await expect(modal(page)).toContainText('dihitung ulang');
+   await modal(page).getByRole('button',{name:'Kembali Periksa',exact:true}).click();
+   await expect(page.locator('#calculation-mode')).toHaveValue('manual');
+   await expect(page.locator('#payroll-gapok')).toHaveValue('1.000.000');
+   await page.getByRole('button',{name:'Muat komponen master',exact:true}).click();
+   await modal(page).getByRole('button',{name:'Hitung ulang',exact:true}).click();
+   await expect(page.locator('#payroll-gapok')).toHaveValue('2.000.000');
+   expect(writes).toBe(0);
+   await page.reload();
+   await expect(page.locator('#payroll-gapok')).toHaveValue('1.000.000');
+   await expect(page.locator('#calculation-mode')).toHaveValue('manual');
+  }
+  expect(writes).toBe(0);
+ });
 });

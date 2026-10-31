@@ -94,7 +94,8 @@ document.addEventListener('DOMContentLoaded', function () {
    if(sources&&data.snapshot?.mode==='master'){
     sources.replaceChildren();
     for(const [table,field,label] of sourceFields){const row=document.createElement('div');const value=data.snapshot.sources?.[table]?.[field];row.textContent=label+': '+(value===null||value===undefined?'Belum diatur':rupiah(value));sources.append(row);}
-   }
+   }else if(sources&&data.snapshot?.mode==='manual'){sources.textContent='Komponen diisi manual; tidak memakai tarif master untuk perhitungan ini.';}
+
   };
   const calculate=async options=>{
    options=options||{};clearTimeout(timer);abortController?.abort();abortController=new AbortController();const current=++revision;

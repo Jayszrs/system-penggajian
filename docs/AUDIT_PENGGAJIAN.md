@@ -1,6 +1,6 @@
 # Audit perhitungan penggajian
 
-Audit 31 Oktober 2026 mencakup kalkulasi transaksi, sumber tarif, klasifikasi komponen, ringkasan dashboard, tujuh keluaran laporan, serta validasi dan konfirmasi penyimpanan. Tampilan hijau dan struktur navigasi tetap dipertahankan. Dokumen publik ini tidak memuat identitas karyawan, NIP, nominal individu, atau total gaji riil.
+Audit 31 Oktober–1 November 2026 mencakup kalkulasi transaksi, sumber tarif, klasifikasi komponen, ringkasan dashboard, tujuh keluaran laporan, serta validasi dan konfirmasi penyimpanan. Tampilan hijau dan struktur navigasi tetap dipertahankan. Dokumen publik ini tidak memuat identitas karyawan, NIP, nominal individu, atau total gaji riil.
 
 ## Temuan dan perbaikan
 
@@ -38,6 +38,8 @@ Dialog memakai komponen antarmuka lokal yang sudah tersedia. Informasi menjelask
 Audit hanya baca menemukan **332 transaksi pada 16 periode**, dengan **nol selisih** pada tiga identitas bruto/potongan/bersih. Tidak ditemukan duplikasi NIP/periode, referensi hilang, periode invalid, atau NULL komponen/total pada snapshot yang diperiksa. Nominal histori yang sudah cocok tidak direklasifikasi atau dihitung ulang massal.
 
 Migrasi metadata menambahkan `calculation_version VARCHAR(24) NOT NULL DEFAULT 'legacy_v1'` dan `calculation_snapshot JSON NULL`. Seluruh 32 kolom sumber, arsip, dan nilai aslinya tetap dipertahankan. `scripts/migrate-accounting.php` aman dijalankan ulang dan tidak mengganti nominal.
+
+Migrasi metadata database utama selesai pada 1 November 2026 sesudah backup dan pengujian pada database terpisah. Pemeriksaan checksum pascamigrasi cocok pada 17 tabel; seluruh 332 transaksi tetap `legacy_v1` dengan snapshot histori NULL. Tidak ada perubahan nominal massal.
 
 Transaksi baru atau perubahan komponen menggunakan `accounting_v2`. Membuka histori, mengubah tarif master, atau menyimpan ulang tanpa perubahan komponen tidak menghitung ulang nilai lama. Memilih perhitungan master sekarang pada record historis merupakan tindakan eksplisit dan menimbulkan peringatan. Dasar tarif historis yang tidak tersedia tidak direkonstruksi dari master sekarang.
 

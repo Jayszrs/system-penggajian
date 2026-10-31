@@ -4,7 +4,8 @@ namespace App\Core;
 abstract class Controller {
     protected function view(string $template, array $data = [], bool $layout = true): void {
         if(($_SERVER['REQUEST_METHOD']??'GET')==='POST' && expects_json() && !empty($data['error'])){
-            json_response(['error'=>$data['error'],'issues'=>$data['issues']??[['code'=>'validation_failed','severity'=>'error','field'=>'','message'=>$data['error']]]],422);
+            $status=http_response_code();$status=$status>=400?$status:422;
+            json_response(['error'=>$data['error'],'issues'=>$data['issues']??[['code'=>$status>=500?'server_error':'validation_failed','severity'=>'error','field'=>'','message'=>$data['error']]]],$status);
         }
         extract($data, EXTR_SKIP);
         if ($layout) { ob_start(); require BASE_PATH . '/app/Views/' . $template . '.php'; $content = ob_get_clean(); require BASE_PATH . '/app/Views/layout.php'; }

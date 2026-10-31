@@ -2,9 +2,10 @@
 const appUrl = path => (document.querySelector('meta[name=app-base-path]')?.content ?? '') + '/' + path.replace(/^\/+/, '');
 const rupiah = value => {const s=String(value??'0').split('.')[0];return `${s.startsWith('-')?'-':''}Rp ${s.replace('-','').replace(/\B(?=(\d{3})+(?!\d))/g,'.')}`;};
 const numberInputs=new Map();
+const invalidNumberPaste=new WeakSet();
 const groupInteger=value=>value.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 const inputInteger=(input,value)=>numberInputs.get(input)?.test(value)?value.replace(/\./g,''):null;
-const setNumberInputValue=(input,value)=>{const text=String(value??'');const raw=inputInteger(input,text);const formatted=raw===null?text:groupInteger(raw);if(input.value!==formatted)input.value=formatted;if(numberInputs.has(input)&&(text===''||raw!==null))input.setCustomValidity('');};
+const setNumberInputValue=(input,value)=>{const text=String(value??'');const raw=inputInteger(input,text);const formatted=raw===null?text:groupInteger(raw);if(input.value!==formatted)input.value=formatted;if(numberInputs.has(input)&&!invalidNumberPaste.has(input)&&(text===''||raw!==null))input.setCustomValidity('');};
 // Format integers as strings so 18-digit amounts never pass through floating point.
 document.querySelectorAll('input[inputmode="numeric"]').forEach(input=>{
  const signed=input.pattern.startsWith('-?');const sign=signed?'-?':'';
@@ -13,9 +14,10 @@ document.querySelectorAll('input[inputmode="numeric"]').forEach(input=>{
  const error='Gunakan bilangan bulat dengan maksimal 18 digit. Contoh: 100.000.';
  const position=(value,count)=>{let seen=0;for(let i=0;i<value.length;i++){if(value[i]!=='.')seen++;if(seen===count)return i+1;}return count===0?0:value.length;};
  const format=(start,end=start)=>{const raw=input.value.replace(/\./g,'');const text=groupInteger(raw);input.value=text;if(start!==undefined)input.setSelectionRange(position(text,start),position(text,end));};
- const validate=()=>input.setCustomValidity(input.value===''||inputInteger(input,input.value)!==null?'':error);
+ const validate=()=>input.setCustomValidity(!invalidNumberPaste.has(input)&&(input.value===''||inputInteger(input,input.value)!==null)?'':error);
  input.addEventListener('input',event=>{
   if(event.isComposing)return;
+  invalidNumberPaste.delete(input);
   const raw=input.value.replace(/\./g,'');const editing=event.inputType?.startsWith('delete')||(/^insert(?:Text|ReplacementText)$/.test(event.inputType??'')&&/^-?[0-9]*$/.test(event.data??''));
   if(inputInteger(input,input.value)!==null||(editing&&new RegExp('^'+sign+'[0-9]{1,18}$').test(raw))){
    const start=input.value.slice(0,input.selectionStart??input.value.length).replace(/\./g,'').length;const end=input.value.slice(0,input.selectionEnd??input.value.length).replace(/\./g,'').length;format(start,end);
@@ -27,7 +29,7 @@ document.querySelectorAll('input[inputmode="numeric"]').forEach(input=>{
   const text=event.clipboardData?.getData('text').trim();if(text===undefined)return;
   event.preventDefault();const pasted=inputInteger(input,text);
   const before=input.value.slice(0,input.selectionStart??0).replace(/\./g,'');const after=input.value.slice(input.selectionEnd??input.value.length).replace(/\./g,'');const combined=before+(pasted??'')+after;
-  if(pasted===null||!new RegExp('^'+sign+'[0-9]{1,18}$').test(combined)){input.setCustomValidity(error);input.reportValidity();return;}
+  if(pasted===null||!new RegExp('^'+sign+'[0-9]{1,18}$').test(combined)){invalidNumberPaste.add(input);input.setCustomValidity(error);input.reportValidity();return;}
   input.value=combined;format(before.length+pasted.length);input.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertFromPaste'}));
  });
  input.addEventListener('beforeinput',event=>{
@@ -39,7 +41,7 @@ document.querySelectorAll('input[inputmode="numeric"]').forEach(input=>{
  });
  input.addEventListener('blur',()=>{setNumberInputValue(input,input.value);validate();});
  input.addEventListener('compositionend',()=>input.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText'})));
- input.form?.addEventListener('reset',()=>setTimeout(()=>{setNumberInputValue(input,input.value);validate();},0));
+ input.form?.addEventListener('reset',()=>setTimeout(()=>{invalidNumberPaste.delete(input);setNumberInputValue(input,input.value);validate();},0));
  setNumberInputValue(input,input.value);validate();
 });
 // Keep the visible separators while both native submissions and AJAX use raw integers.
