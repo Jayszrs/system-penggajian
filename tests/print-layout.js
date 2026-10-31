@@ -38,6 +38,22 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await page.getByLabel('ID pengguna', { exact: true }).fill('qa_print');
     await page.getByLabel('Kata sandi', { exact: true }).fill('Qa!Print-2026-Local');
     await page.getByRole('button', { name: 'Masuk ke ruang kerja', exact: true }).click();
+    await page.goto(base + '/master/bagian?new=1');
+    await expect(page.locator('.master-form-panel')).toBeVisible();
+    await page.locator('#master-kd_bagian').fill('QA999');
+    await page.locator('#master-nama_bagian').fill('Bagian QA sinkronisasi');
+    await page.getByRole('button', { name: 'Simpan data', exact: true }).click();
+    await expect(page.locator('.alert-success')).toContainText('disimpan');
+    await page.getByRole('link', { name: 'Ubah QA999', exact: true }).click();
+    const masterId = await page.locator('.master-form-panel input[name=id]').inputValue();
+    await page.locator('#master-nama_bagian').fill('Bagian QA diubah');
+    await page.getByRole('button', { name: 'Simpan data', exact: true }).click();
+    await expect(page.locator('tbody')).toContainText('Bagian QA diubah');
+    const csrf = await page.locator('meta[name=csrf-token]').getAttribute('content');
+    const deleted = await page.request.post(base + '/master/bagian', { form: { _csrf: csrf, id: masterId, action: 'delete' } });
+    expect(deleted.ok()).toBeTruthy();
+    await page.goto(base + '/master/bagian?q=QA999');
+    await expect(page.locator('tbody')).not.toContainText('Bagian QA diubah');
     const report = async (query, filename) => {
       await page.goto(base + '/laporan?' + new URLSearchParams({ bulan: '10', tahun: '2026', view: '1', ...query }));
       await expect(page.getByRole('button', { name: 'Cetak / Simpan PDF', exact: true })).toBeVisible();
@@ -82,7 +98,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await page.goto(base + '/laporan?type=slip_karyawan&bulan=1&tahun=2099&view=1');
     await expect(page.getByRole('button', { name: 'Cetak / Simpan PDF', exact: true })).toHaveCount(0);
     expect(errors).toEqual([]);
-    console.log('PASS: tujuh laporan, semua pintasan slip, nilai komponen, nama petugas, jam WIB, batch, data kosong dan pratinjau mobile.');
+    console.log('PASS: CRUD Master, tujuh laporan, semua pintasan slip, nilai komponen, nama petugas, jam WIB, batch, data kosong dan pratinjau mobile.');
   } finally {
     await browser?.close();
     if (server) { server.kill();if (server.exitCode === null) await new Promise(resolve => server.once('exit', resolve)); }

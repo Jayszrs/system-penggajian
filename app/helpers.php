@@ -18,7 +18,12 @@ function url(string $path = '', array $query = []): string {
     if ($base !== '' && $path !== $base && !str_starts_with($path, $base . '/') && !str_starts_with($path, $base . '?')) $path = $base . $path;
     return $path . ($query ? (str_contains($path, '?') ? '&' : '?') . http_build_query($query) : '');
 }
-function redirect(string $path): never { header('Location: ' . url($path), true, 303); exit; }
+function redirect(string $path): never {
+    $target = url(str_replace(['\\', "\r", "\n", "\0"], '/', $path));
+    if (!str_starts_with($target, '/') || str_starts_with($target, '//') || str_contains($target, '://')) $target = '/';
+    header("Location: $target", true, 303);
+    exit;
+}
 function csrf_token(): string { return $_SESSION['csrf'] ??= bin2hex(random_bytes(32)); }
 function csrf_field(): string { return '<input type="hidden" name="_csrf" value="' . e(csrf_token()) . '">'; }
 function flash(string $type, string $message): void { $_SESSION['flash'][] = compact('type', 'message'); }
