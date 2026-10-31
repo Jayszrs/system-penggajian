@@ -1,0 +1,12 @@
+Options -Indexes
+DirectoryIndex index.php
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^(?:app|config|database|docs|scripts|storage|tests|node_modules)(?:/|$) - [F,L,NC]
+RewriteRule (^|/)\. - [F,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [QSA,L]
+</IfModule>
+<FilesMatch "\.(?:env|json|lock|md|sql|log|ps1|py|bak|dat|exe)$">
+Require all denied
+</FilesMatch>
