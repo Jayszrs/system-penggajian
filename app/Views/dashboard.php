@@ -1,5 +1,5 @@
 <div class="page-heading dashboard-heading">
- <div><div class="eyebrow">SELAMAT DATANG DI RUANG KERJA ANDA</div><h1>Dashboard Penggajian<span class="heading-dot">.</span></h1><p>Pantau penghasilan, kelola dengan lebih tenang.</p></div>
+ <div><h1>Dashboard Penggajian<span class="heading-dot">.</span></h1></div>
  <form class="period-picker" method="get" aria-label="Periode dashboard">
   <div class="dropdown select-dropdown period-month-dropdown">
    <label class="visually-hidden" for="period-month">Bulan</label>

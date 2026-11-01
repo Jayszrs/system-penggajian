@@ -58,6 +58,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await page.goto(base + '/master/bagian?q=QA999');
     await expect(page.locator('tbody')).not.toContainText('Bagian QA diubah');
     await require('./layout-refinement')(page,base,fixture,output);
+    await require('./page-heading-cleanup')(page, base, fixture, output);
     const report = async (query, filename) => {
       await page.goto(base + '/laporan?' + new URLSearchParams({ bulan: '10', tahun: '2026', view: '1', ...query }));
       await expect(page.getByRole('button', { name: 'Cetak / Simpan PDF', exact: true })).toBeVisible();

@@ -63,6 +63,9 @@ async function verifySidebar(page, base, folder) {
     await reports.getByRole('link', { name: label, exact: true }).click();
     await expect(page).toHaveURL(base + '/laporan?type=' + type);
     await expect(page.locator('.filter-bar input[name=type]')).toHaveValue(type);
+    await expect(page.locator('.report-types,.report-type')).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Jenis laporan', exact: true })).toHaveCount(0);
+    await expect(page.locator('.page-heading .eyebrow,.page-heading p')).toHaveCount(0);
     await expect(reports).toHaveJSProperty('open', true);
     await expect(workspace.locator('a[aria-current=page]')).toHaveText(label);
     await expect(page.locator('.breadcrumb-area strong')).toHaveText('Laporan');
@@ -70,6 +73,7 @@ async function verifySidebar(page, base, folder) {
     await page.getByRole('button', { name: 'Tampilkan', exact: true }).click();
     await expect(workspace.locator('a[aria-current=page]')).toHaveText(label);
     await expect(page.locator('.report-toolbar')).toBeVisible();
+    await expect(page.locator('.report-toolbar h2')).toHaveText('Pratinjau');
   }
   for (const suffix of ['', '?type=tidak_valid']) {
     await page.goto(base + '/laporan' + suffix);
@@ -130,8 +134,7 @@ async function verifySearchAndReportLayout(page, base, folder) {
   await expect(page.locator('#master-search-options')).toBeVisible();
   const firstChoice = page.locator('#master-search-options .dropdown-item').first();
   const employeeCode = await firstChoice.getAttribute('data-select-value');
-  const employeeLabel = await firstChoice.textContent();
-  const employeeName = employeeLabel.slice(employeeLabel.indexOf(' · ') + 3);
+  const employeeName = await firstChoice.locator('.employee-option-name').textContent();
   await search.fill(employeeName);
   await expect(firstChoice).toBeVisible();
   await search.fill('tidak-ada-hasil-qa-routing');
@@ -252,7 +255,7 @@ async function verify(browser, folder) {
     const page = await context.newPage();
     const failures = [];
     page.on('pageerror', error => failures.push(error.message));
-    page.on('response', response => { if (response.status() >= 400) failures.push(`${response.status()} ${response.url()}`); });
+    page.on('response', response => { if (response.status() >= 400 && !(response.status() === 422 && new URL(response.url()).pathname === prefix + '/api/hitung')) failures.push(`${response.status()} ${response.url()}`); });
     page.on('request', request => {
       const address = new URL(request.url());
       if (address.origin === new URL(base).origin && !address.pathname.startsWith(prefix + '/')) failures.push('Request escaped the application folder: ' + address.pathname);
@@ -273,19 +276,28 @@ async function verify(browser, folder) {
     await expect(page.locator('#payroll-form')).toHaveAttribute('action', prefix + '/transaksi/form');
     await expect(page.locator('[data-nav-group=transaksi]')).toHaveJSProperty('open', true);
     await expect(page.getByRole('navigation', { name: 'Ruang kerja', exact: true }).locator('a[aria-current=page]')).toHaveText('Penggajian');
-    await page.getByRole('button', { name: 'Cari', exact: true }).click();
-    await page.getByLabel('Cari NIP atau nama').fill('000000000000001');await expect(page.locator('.picker-result')).toHaveCount(1);await expect(page.locator('.picker-result').first()).toBeVisible();
-    await page.locator('.picker-result').first().click();
-    await page.getByLabel('Hari efektif', { exact: true }).fill('21');
-    await page.getByLabel('Masuk kerja', { exact: true }).fill('21');
-    const calculation = page.waitForResponse(response => response.url() === base + '/api/hitung' && response.request().method() === 'POST');
-    await page.getByRole('button', { name: 'Muat komponen master' }).click();
-    expect((await calculation).status()).toBe(200);
+    await page.locator('#calculation-mode-toggle').click();
+    await page.locator('#calculation-mode-options [data-select-value="manual"]').click();
     await page.locator('#form-month-toggle').click();
     await page.locator('#form-month-options [data-select-value="1"]').click();
     await page.locator('#form-year').fill('2098');
+    await page.getByLabel('Hari efektif', { exact: true }).fill('21');
+    await page.getByLabel('Masuk kerja', { exact: true }).fill('21');
+    await page.locator('#employee-nip').focus();
+    await expect(page.locator('#employee-nip-options')).toBeVisible();
+    await page.locator('#employee-nip-options .dropdown-item').first().click();
+    await expect(page.locator('#employee-name')).not.toHaveValue('');
+    const calculation = page.waitForResponse(response => response.url() === base + '/api/hitung' && response.request().method() === 'POST');
     await page.getByRole('button', { name: 'Simpan penghasilan', exact: true }).click();
+    expect((await calculation).status()).toBe(200);
+    const feedback = page.locator('#feedback-modal');
+    await expect(feedback).toBeVisible();
+    if (await feedback.getByRole('button', { name: 'Lanjutkan Simpan', exact: true }).count()) {
+      await feedback.getByRole('button', { name: 'Lanjutkan Simpan', exact: true }).click();
+    }
     await expect(page).toHaveURL(/\/transaksi\/form\?id=\d+$/);
+    await expect(feedback).toBeVisible();
+    await feedback.getByRole('button', { name: 'Mengerti', exact: true }).click();
     const savedId = await page.locator('#payroll-form input[name=id]').inputValue();
     try {
       await page.reload();

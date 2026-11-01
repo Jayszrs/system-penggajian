@@ -18,6 +18,7 @@ try {
     ob_start();require BASE_PATH.'/scripts/install.php';ob_end_clean();
     $db=App\Core\Database::connection();
     $db->prepare('INSERT INTO app_users(username,name,password_hash) VALUES(?,?,?)')->execute(['qa_print','Accounting QA Cetak',password_hash('Qa!Print-2026-Local',PASSWORD_DEFAULT)]);
+    $db->prepare('INSERT INTO legacy_tables(table_name,row_count,schema_data,content_sha256) VALUES(?,?,?,?)')->execute(['qa_print_archive',0,'[]',hash('sha256','')]);
     $db->exec("INSERT INTO bagian(kd_bagian,nama_bagian) VALUES('PA001','Bagian Cetak Satu'),('PB001','Bagian Cetak Dua')");
     $longName='Karyawan Pengujian Nama Sangat Panjang untuk Verifikasi Tata Letak Slip dan Tanda Tangan Tanpa Pemotongan serta Kelengkapan Identitas Penerima Gaji';
     $employee=$db->prepare('INSERT INTO karyawan(nip,nama,kd_bagian) VALUES(?,?,?)');
