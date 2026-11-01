@@ -34,6 +34,42 @@ test.describe.serial('Penggajian with restored source fixtures',()=>{
   await expect(page.locator('.period-month-menu .dropdown-item').first()).toBeFocused();
   await page.keyboard.press('Escape');await expect(monthToggle).toHaveAttribute('aria-expanded','false');await expect(monthToggle).toBeFocused();
  });
+ test('sidebar resizes, persists, supports keyboard and stays safe on mobile',async({page})=>{
+  test.setTimeout(60000);
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  const handle=page.locator('#sidebar-resizer'),sidebar=page.locator('#sidebar');
+  const width=async value=>{await expect(handle).toHaveAttribute('aria-valuenow',String(value));await expect(sidebar).toHaveCSS('width',value+'px');expect(await page.locator('.app-main').evaluate(element=>element.getBoundingClientRect().left)).toBe(value);};
+  const noOverflow=async()=>expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  const drag=async target=>{const bounds=await handle.boundingBox(),current=await sidebar.evaluate(element=>element.getBoundingClientRect().width),from=bounds.x+bounds.width/2;await page.mouse.move(from,120);await page.mouse.down();await page.mouse.move(from+target-current,120,{steps:6});await page.mouse.up();};
+  await page.goto('/');await expect(handle).toBeVisible();await width(260);
+  expect((await handle.boundingBox()).x).toBeGreaterThanOrEqual(await sidebar.evaluate(element=>element.getBoundingClientRect().right));
+  await drag(320);await width(320);await expect(page.locator('body')).not.toHaveClass(/sidebar-resizing/);
+  await page.reload();await width(320);
+  await page.goto('/transaksi/form');await width(320);
+  await drag(1000);await width(400);
+  await page.screenshot({path:'storage/qa/sidebar-wide.png'});
+  for(const route of ['/','/transaksi/form','/laporan?type=slip_karyawan','/master/karyawan']){await page.goto(route);await width(400);await noOverflow();}
+  await drag(50);await width(260);await noOverflow();expect(await sidebar.evaluate(element=>element.scrollWidth<=element.clientWidth)).toBe(true);
+  await page.screenshot({path:'storage/qa/sidebar-narrow.png'});
+  await drag(50);await width(260);await handle.focus();await page.keyboard.press('ArrowLeft');await width(260);await expect(handle).toHaveAttribute('aria-valuemin','260');
+  await handle.focus();await page.keyboard.press('ArrowRight');await width(270);await page.keyboard.press('Shift+ArrowRight');await width(290);await page.keyboard.press('ArrowLeft');await width(280);
+  await page.keyboard.press('Home');await width(260);await page.keyboard.press('End');await width(400);await page.keyboard.press('Enter');await width(260);
+  await drag(310);await width(310);await handle.dblclick();await width(260);
+  const bounds=await handle.boundingBox();await page.mouse.move(bounds.x+bounds.width/2,120);await page.mouse.down();await page.mouse.move(300,120);await page.keyboard.press('Escape');await page.mouse.up();await width(260);await expect(page.locator('body')).not.toHaveClass(/sidebar-resizing/);await page.reload();await width(260);
+  await handle.focus();await page.keyboard.press('End');await width(400);
+  await page.setViewportSize({width:1024,height:900});await width(400);await noOverflow();
+  await page.setViewportSize({width:768,height:900});await width(288);await expect(handle).toHaveAttribute('aria-valuemax','288');await noOverflow();
+  await page.setViewportSize({width:390,height:844});await expect(handle).toBeHidden();await expect(sidebar).toHaveCSS('width','240px');await expect(page.locator('.app-main')).toHaveCSS('margin-left','0px');
+  await page.getByRole('button',{name:'Buka navigasi',exact:true}).click();await expect(page.locator('body')).toHaveClass(/sidebar-open/);await noOverflow();await page.keyboard.press('Escape');await expect(page.locator('body')).not.toHaveClass(/sidebar-open/);
+  await page.setViewportSize({width:1600,height:1000});await width(400);
+  await page.emulateMedia({media:'print'});await expect(handle).toBeHidden();await expect(sidebar).toBeHidden();await page.emulateMedia({media:'screen'});
+  await page.evaluate(()=>localStorage.setItem('mutiara.sidebarWidth:'+(document.querySelector('meta[name=app-base-path]')?.content??''),'not-a-number'));await page.reload();await width(260);
+  await page.evaluate(()=>localStorage.setItem('mutiara.sidebarWidth:'+(document.querySelector('meta[name=app-base-path]')?.content??''),'200'));await page.reload();await width(260);
+  await page.evaluate(()=>{const key='mutiara.sidebarWidth:'+(document.querySelector('meta[name=app-base-path]')?.content??'');localStorage.removeItem(key+':default');localStorage.setItem(key,'280');});await page.reload();await width(260);
+  await handle.focus();await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await width(280);await page.reload();await width(280);
+  await page.addInitScript(()=>{for(const method of ['getItem','setItem'])Object.defineProperty(Storage.prototype,method,{configurable:true,value(){throw new Error('Storage unavailable');}});});
+  await page.reload();await width(260);await drag(300);await width(300);await handle.dblclick();await width(260);expect(errors).toEqual([]);
+ });
  test('all legacy master modules and full migration archive',async({page})=>{
   test.setTimeout(60000);
   const modules=['bagian','karyawan','tunj_harian','tunj_konsumsi','tunj_lembur','tunj_infal','tunj_overtime','tunj_jam','p_anak','p_bjbs','p_bank','p_lunak','p_lain'];

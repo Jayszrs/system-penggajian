@@ -188,8 +188,8 @@ async function verifySearchAndReportLayout(page, base, folder) {
         return element.scrollWidth <= element.clientWidth && element.scrollHeight <= element.clientHeight;
       })).toBeTruthy();
     }
-    expect(await page.locator('.sidebar').evaluate(element => element.getBoundingClientRect().width)).toBe(240);
-    expect(await page.locator('.app-main').evaluate(element => parseFloat(getComputedStyle(element).marginLeft))).toBe(width < 761 ? 0 : 240);
+    expect(await page.locator('.sidebar').evaluate(element => element.getBoundingClientRect().width)).toBe(width < 761 ? 240 : 260);
+    expect(await page.locator('.app-main').evaluate(element => parseFloat(getComputedStyle(element).marginLeft))).toBe(width < 761 ? 0 : 260);
     await page.locator('.sidebar').evaluate(element => { element.scrollTop = 0; });
     await page.screenshot({ path: path.join(qaPath, `sidebar-compact-${folder ? 'folder' : 'root'}-${width}.png`) });
     if (width < 761) await page.keyboard.press('Escape');
