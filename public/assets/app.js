@@ -68,15 +68,40 @@ window.addEventListener('beforeprint',()=>{
 document.querySelectorAll('[data-report-range]').forEach(input=>input.addEventListener('change',()=>{document.querySelectorAll('[data-range-field]').forEach(field=>{field.hidden=!input.checked;field.querySelectorAll('input,select').forEach(i=>i.disabled=!input.checked);});}));
 const dropdownSync=new WeakMap();
 const syncDropdown=control=>dropdownSync.get(control)?.();
+// Resolve payroll identity locally; a search query is never a selected NIP.
+const payrollEmployeeSelection=(()=>{
+ const input=document.querySelector('[data-payroll-employee]');
+ if(!input||input.readOnly)return null;
+ const form=input.form,department=form.querySelector('[name=bagian]'),name=document.getElementById('employee-name');
+ const employees=Array.from(input.list?.options??[]);
+ const matches=option=>!department.value||option.dataset.department===department.value;
+ const selected=()=>employees.find(option=>option.value===input.value&&matches(option));
+ const sync=()=>{
+  const employee=selected();name.value=employee?.label||'';
+  input.setCustomValidity(input.value&&!employee?'Pilih karyawan dari daftar atau masukkan NIP yang sesuai dengan bagian.':'');
+  if(employee&&!department.value){department.value=employee.dataset.department;syncDropdown(department);}
+ };
+ input.addEventListener('input',sync);input.addEventListener('change',sync);
+ department.addEventListener('change',()=>{
+  if(input.value&&!selected()){input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));}
+  sync();syncDropdown(input);
+ });
+ form.addEventListener('reset',()=>setTimeout(sync,0));sync();
+ return {matches,isValid:()=>Boolean(selected())};
+})();
 // All choices share the dashboard dropdown; original controls still submit and validate.
 if(window.bootstrap?.Dropdown){
  document.querySelectorAll('select:not([multiple]),input[list]').forEach((control,index)=>{
   const editable=control.matches('input');const options=Array.from(editable?control.list?.options??[]:control.options);
+  const payrollContext=Boolean(control.closest('.payroll-context')),payrollEmployee=control.hasAttribute('data-payroll-employee');
+  const employeeDropdown=control.hasAttribute('data-employee-dropdown'),sizedMenu=payrollContext||employeeDropdown;
+  const optionName=option=>option.dataset.employeeName??(option.label||option.textContent);
   if(!editable&&!options.length)return;
   control.id||=`dropdown-${index}`;
   const fieldLabel=(control.labels?.[0]?.textContent??control.getAttribute('aria-label')??control.name).replace(/\*/g,'').trim();
   let wrapper=control.closest('.select-dropdown');
   if(!wrapper){wrapper=document.createElement('div');wrapper.className='dropdown select-dropdown';control.before(wrapper);wrapper.append(control);}
+  if(employeeDropdown)wrapper.classList.add('employee-dropdown');
   let toggle=wrapper.querySelector('[data-select-toggle]');
   if(!toggle){
    toggle=document.createElement('button');toggle.type='button';toggle.className='btn btn-light select-dropdown-toggle';toggle.id=control.id+'-toggle';toggle.dataset.selectToggle='';toggle.dataset.bsToggle='dropdown';toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-haspopup','true');toggle.setAttribute('aria-label','Pilih '+fieldLabel.toLowerCase());
@@ -92,13 +117,22 @@ if(window.bootstrap?.Dropdown){
   if(month)menu.classList.add('period-month-menu');
   const label=toggle.querySelector('[data-selected-label]');
   if(label){label.id=control.id+'-selected';toggle.setAttribute('aria-describedby',label.id);}
-  const dropdown=bootstrap.Dropdown.getOrCreateInstance(toggle,{reference:editable?wrapper:'toggle',popperConfig:config=>({...config,strategy:'fixed',modifiers:[...config.modifiers,{name:'preventOverflow',options:{boundary:'viewport',padding:18}}]})});
+  const dropdown=bootstrap.Dropdown.getOrCreateInstance(toggle,{reference:editable?wrapper:'toggle',...(sizedMenu?{offset:[0,6]}:{}),popperConfig:config=>({...config,strategy:'fixed',modifiers:[...config.modifiers,{name:'preventOverflow',options:{boundary:'viewport',padding:18}},...(sizedMenu?[{
+   name:'choiceMenuSize',enabled:true,phase:'beforeRead',fn:({state})=>{
+    const bounds=wrapper.getBoundingClientRect();const available=Math.max(Math.min(bounds.top,innerHeight),innerHeight-Math.max(0,bounds.bottom))-24;
+    menu.style.maxHeight=Math.max(48,Math.min(320,available))+'px';
+    // Flip and overflow calculations must use the height after limiting the menu.
+    state.rects.popper.height=menu.offsetHeight;
+   }
+  }]:[])]})});
   const entries=[];
+  let filter=()=>{},query='';
   const sync=()=>{
    if(label)label.textContent=control.selectedOptions[0]?.textContent??'';
    toggle.disabled=control.disabled||Boolean(control.readOnly);
    for(const {button,option}of entries){const active=option.value===control.value;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','true');else button.removeAttribute('aria-current');}
    if(control.disabled||control.validity.valid){wrapper.classList.remove('is-invalid');toggle.removeAttribute('aria-invalid');const feedback=wrapper.querySelector('.invalid-feedback');if(feedback){feedback.hidden=true;feedback.textContent='';}if(label)toggle.setAttribute('aria-describedby',label.id);else toggle.removeAttribute('aria-describedby');}
+   if(payrollEmployee)filter(control.value?query:'');
   };
   let search;
   if(!month&&!editable&&(options.length>8||control.matches('[name="nip"],[name="bagian"],[name="kd_bagian"]'))){
@@ -107,22 +141,32 @@ if(window.bootstrap?.Dropdown){
   let skipFocusOpen=false;
   const focusControl=()=>{skipFocusOpen=true;(editable?control:toggle).focus();skipFocusOpen=false;};
   const choose=option=>{
+   if(payrollEmployee&&payrollEmployeeSelection&&!payrollEmployeeSelection.matches(option))return;
    const changed=control.value!==option.value;control.value=option.value;sync();dropdown.hide();focusControl();
    if(changed){control.dispatchEvent(new Event('input',{bubbles:true}));control.dispatchEvent(new Event('change',{bubbles:true}));}
   };
   for(const option of options){
-   const item=document.createElement('li');const button=document.createElement('button');button.type='button';button.className='dropdown-item';button.dataset.selectValue=option.value;button.textContent=control.hasAttribute('data-year-control')?option.value:(editable?option.value+' · '+(option.label||option.textContent):option.textContent);button.disabled=option.disabled||Boolean(option.parentElement.disabled);
+   const item=document.createElement('li');const button=document.createElement('button');button.type='button';button.className='dropdown-item';button.dataset.selectValue=option.value;
+   if(employeeDropdown&&option.value){
+    const name=document.createElement('span'),nip=document.createElement('small'),department=document.createElement('small');
+    name.className='employee-option-name';name.textContent=optionName(option);
+    nip.className='employee-option-nip';nip.textContent='NIP '+option.value;
+    department.className='employee-option-department';department.textContent='Bagian: '+(option.dataset.departmentName||'Belum diatur');
+    button.append(name,nip,department);
+   }
+   else button.textContent=control.hasAttribute('data-year-control')?option.value:(editable?option.value+' · '+(option.label||option.textContent):option.textContent);
+   button.disabled=option.disabled||Boolean(option.parentElement.disabled);
    button.addEventListener('click',()=>choose(option));item.append(button);menu.append(item);entries.push({item,button,option});
   }
-  const empty=document.createElement('li');empty.className='select-dropdown-empty';empty.textContent='Tidak ada pilihan yang sesuai.';empty.hidden=true;menu.append(empty);
-  const filter=query=>{const text=query.toLocaleLowerCase('id').trim();let count=0;for(const {item,button}of entries){item.hidden=!button.textContent.toLocaleLowerCase('id').includes(text);if(!item.hidden)count++;}empty.hidden=count>0;dropdown.update();};
+  const empty=document.createElement('li');empty.className='select-dropdown-empty';empty.textContent=employeeDropdown?'Tidak ada karyawan yang sesuai.':'Tidak ada pilihan yang sesuai.';empty.setAttribute('role','status');empty.hidden=true;menu.append(empty);
+  filter=value=>{query=value;const text=value.toLocaleLowerCase('id').trim();let count=0;for(const {item,button,option}of entries){const allowed=!payrollEmployee||!payrollEmployeeSelection||payrollEmployeeSelection.matches(option);item.hidden=!allowed||!(option.value+' '+optionName(option)).toLocaleLowerCase('id').includes(text);if(!item.hidden)count++;}empty.hidden=count>0;dropdown.update();};
   const focusOption=event=>{if(event.key==='ArrowDown'&&!control.disabled&&!control.readOnly){event.preventDefault();event.stopPropagation();dropdown.show();entries.find(entry=>!entry.item.hidden&&!entry.button.disabled)?.button.focus();}};
   if(search){search.addEventListener('input',()=>filter(search.value));search.addEventListener('keydown',focusOption);search.addEventListener('click',event=>event.stopPropagation());}
   toggle.addEventListener('show.bs.dropdown',()=>{
    document.querySelectorAll('[data-select-toggle][aria-expanded="true"]').forEach(other=>{if(other!==toggle)bootstrap.Dropdown.getInstance(other)?.hide();});
-   menu.style.width=Math.min(Math.max(wrapper.getBoundingClientRect().width,month?280:240),innerWidth-36)+'px';
+   menu.style.width=Math.min(sizedMenu?wrapper.getBoundingClientRect().width:Math.max(wrapper.getBoundingClientRect().width,month?280:240),innerWidth-36)+'px';
    if(search)search.value='';
-   filter('');
+   filter(payrollEmployee&&payrollEmployeeSelection&&!payrollEmployeeSelection.isValid()?control.value:'');
   });
   if(editable){
    wrapper.classList.add('select-dropdown-editable');toggle.classList.add('select-dropdown-input-toggle');control.removeAttribute('list');if(!control.hasAttribute('data-year-control'))control.removeAttribute('maxlength');control.setAttribute('autocomplete','off');control.setAttribute('aria-controls',menu.id);control.setAttribute('aria-haspopup','true');
@@ -130,6 +174,10 @@ if(window.bootstrap?.Dropdown){
    control.addEventListener('click',event=>{event.stopPropagation();if(!control.disabled&&!control.readOnly)dropdown.show();});
    control.addEventListener('input',event=>{if(event.isTrusted&&!control.readOnly&&!control.disabled){dropdown.show();filter(control.value);}});
    control.addEventListener('keydown',event=>{focusOption(event);if(event.key==='Escape'){event.preventDefault();dropdown.hide();}});
+   if(employeeDropdown){
+    control.addEventListener('input',sync);
+    control.addEventListener('keydown',event=>{if(event.key==='Enter'&&menu.classList.contains('show')){event.preventDefault();const entry=entries.find(entry=>!entry.item.hidden&&!entry.button.disabled);if(entry)choose(entry.option);}});
+   }
    toggle.addEventListener('hidden.bs.dropdown',()=>{if(document.activeElement===toggle)focusControl();});
   }else{
    control.addEventListener('invalid',event=>{
@@ -155,10 +203,4 @@ if(dashData&&window.Chart){
  new Chart(annual,{type:'bar',data:{labels:['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'],datasets:[{label:'Penghasilan bersih',data:data.annual.map(v=>v===null?null:Number(v)),backgroundColor:bars,borderRadius:5,borderSkipped:false,maxBarThickness:12}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{tooltip:{callbacks:{label:ctx=>rupiah(data.annual[ctx.dataIndex])}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:'#c1dcc9',font}},y:{beginAtZero:true,border:{display:false},grid:{color:'#ffffff24',drawTicks:false},ticks:{maxTicksLimit:4,color:'#c1dcc9',padding:9,font,callback:v=>`${v/1000000} jt`}}}}});
  const dep=document.getElementById('department-chart');const ctx=dep.getContext('2d');const fill=ctx.createLinearGradient(0,0,0,300);fill.addColorStop(0,'#36b77a30');fill.addColorStop(1,'#36b77a00');
  new Chart(dep,{type:'line',data:{labels:data.distribution.map(d=>d.name),datasets:[{label:'Penghasilan bruto',data:data.distribution.map(d=>Number(d.gross)),borderColor:'#0b6b43',backgroundColor:fill,fill:true,borderWidth:2,pointRadius:3,pointHoverRadius:5,pointBackgroundColor:'#0b6b43',cubicInterpolationMode:'monotone',tension:.3},{label:'Potongan',data:data.distribution.map(d=>Number(d.deductions)),borderColor:'#687d3f',backgroundColor:'#a8bf8310',borderWidth:2,pointRadius:3,pointBackgroundColor:'#687d3f',cubicInterpolationMode:'monotone',tension:.3}]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{tooltip:{callbacks:{label:context=>context.dataset.label+': '+rupiah(data.distribution[context.dataIndex][context.datasetIndex===0?'gross':'deductions'])}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{font,color:'#466253',maxRotation:35,minRotation:0}},y:{beginAtZero:true,border:{display:false},grid:{color:'#dce6de',drawTicks:false},ticks:{maxTicksLimit:6,padding:10,font,color:'#466253',callback:v=>v===0?'0':`${v/1000000} jt`}}}}});
-}
-const picker=document.getElementById('employee-picker');
-if(picker){
- const search=picker.querySelector('input[type=search]');const results=picker.querySelector('[data-picker-results]');let timeout;let request=0;
- const load=async()=>{const current=++request;results.textContent='Memuat karyawan…';try{const department=document.querySelector('[name=bagian]')?.value??'';const response=await fetch(appUrl('api/karyawan')+'?'+new URLSearchParams({q:search.value,bagian:department}),{headers:{Accept:'application/json'}});const json=await response.json();if(current!==request)return;if(!response.ok)throw new Error(json.error);results.replaceChildren();if(!json.employees.length){results.textContent='Tidak ada karyawan yang sesuai.';return;}for(const employee of json.employees){const button=document.createElement('button');button.type='button';button.className='picker-result';const name=document.createElement('span');name.textContent=employee.nama;const info=document.createElement('small');info.textContent=`${employee.nip} · ${employee.nama_bagian??employee.kd_bagian}`;button.append(name,info);button.addEventListener('click',()=>{document.getElementById('employee-nip').value=employee.nip;document.getElementById('employee-name').value=employee.nama;document.querySelector('[name=bagian]').value=employee.kd_bagian;syncDropdown(document.querySelector('[name=bagian]'));bootstrap.Modal.getInstance(picker).hide();document.getElementById('employee-nip').dispatchEvent(new Event('change',{bubbles:true}));});results.append(button);}}catch(error){results.textContent=error.message||'Pencarian belum berhasil. Coba kembali.';}};
- picker.addEventListener('shown.bs.modal',()=>{search.focus();load();});search.addEventListener('input',()=>{clearTimeout(timeout);timeout=setTimeout(load,200);});
 }

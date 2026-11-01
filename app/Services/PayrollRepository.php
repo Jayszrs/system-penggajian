@@ -18,6 +18,9 @@ final class PayrollRepository {
         return ['bulan'=>$month,'tahun'=>$year,'bagian'=>$department];
     }
     public function departments(): array { return Database::connection()->query('SELECT * FROM bagian ORDER BY kd_bagian')->fetchAll(); }
+    public function employeeOptions(): array {
+        return Database::connection()->query('SELECT k.nip,k.nama,k.kd_bagian,b.nama_bagian FROM karyawan k LEFT JOIN bagian b ON b.kd_bagian=k.kd_bagian ORDER BY k.nama,k.nip')->fetchAll();
+    }
     /** Suggestions only: any valid year may still be entered directly. */
     public function years(array $selected = []): array {
         $years = Database::connection()->query("SELECT DISTINCT CAST(tahun AS UNSIGNED) FROM penghasilan WHERE tahun REGEXP '^[0-9]{4}$' AND CAST(tahun AS UNSIGNED) BETWEEN 1900 AND 9999")->fetchAll(\PDO::FETCH_COLUMN);

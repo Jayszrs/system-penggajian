@@ -5,7 +5,10 @@ Revisi tampilan mempertahankan palet hijau, perhitungan, sumber data, autentikas
 ## Perilaku antarmuka
 
 - Kolom Karyawan pada Rincian per Bagian di dashboard rata tengah; nominal tetap rata kanan.
-- Konteks Transaksi memakai pembagian 2–2–4–4 dan 5–7 pada desktop, dua kolom pada tablet, serta satu kolom pada ponsel. Tinggi kontrol 48 px. Tahun tetap dapat dipilih dari saran atau diketik, tanpa pemisah ribuan; transaksi tersimpan tetap mengunci periode.
+- Konteks Transaksi memakai pembagian 2–2–4–4 dan 5–7 pada desktop, dua kolom pada tablet, serta satu kolom pada ponsel. Tinggi kontrol 48 px. Tahun memakai input angka seperti Slip & Laporan: dapat diketik pada rentang 1900–9999, langkah satu tahun, tombol naik/turun terlihat, dan tanpa dropdown saran. Transaksi tersimpan tetap mengunci periode serta identitas karyawan.
+- Transaksi Baru memiliki satu pencarian karyawan melalui dropdown NIP; tombol Cari dan dialognya dihapus. Ketik nama/NIP untuk menyaring; pilihan menampilkan nama, NIP, dan nama Bagian. Daftar mengikuti Bagian, atau menampilkan semua jika Bagian kosong. Pilihan valid mengisi nama dan Bagian otomatis; mengganti Bagian mengosongkan karyawan yang tidak sesuai. Teks pencarian yang belum valid tidak memicu permintaan perhitungan. NIP tetap berupa teks, termasuk angka nol di depan.
+- Seluruh dropdown pencarian karyawan di Transaksi Baru, daftar Penggajian, Slip & Laporan, Master Karyawan, serta master tunjangan/potongan memakai nama pada baris utama, `NIP ...` pada baris kedua, dan `Bagian: ...` pada baris ketiga. Nama bagian berasal dari master saat ini; jika nama tidak tersedia, tampilkan kode bagian atau `Belum diatur`. Pilihan aktif, hover, dan fokus memakai latar hijau muda; nilai formulir tetap NIP asli. Pencarian bagian tetap memakai identitas bagian.
+- Dropdown konteks transaksi dan seluruh pencarian karyawan mengikuti lebar kolom, tinggi menu maksimum 320 px yang menyesuaikan ruang layar, serta menyediakan penanda pilihan, fokus keyboard, dan pesan hasil kosong.
 - Filter Penggajian memberikan ruang fleksibel untuk pencarian nama/NIP. Reset dan Tampilkan berada di kanan; Tampilkan selebar 260 px pada desktop mulai 1440 px. Pada tablet tindakan menempati baris terakhir; pada ponsel tombol tersusun vertikal.
 - Reset Penggajian membuka halaman tanpa parameter: periode transaksi terbaru, semua bagian, pencarian kosong, dan halaman pertama. Daftar transaksi dan ringkasan langsung menampilkan hasil default. Tautan Reset tetap bekerja ketika input belum valid dan tidak menghapus data.
 - Ketujuh laporan memiliki Reset, yang mempertahankan jenis laporan dan mengembalikan filter ke default sekaligus menutup pratinjau. Rekap rentang mengelompokkan bulan/tahun dalam Periode Awal dan Periode Akhir.
@@ -14,7 +17,7 @@ Revisi tampilan mempertahankan palet hijau, perhitungan, sumber data, autentikas
 
 ## Verifikasi
 
-Pengujian terakhir meliputi 17 skenario browser, tujuh laporan beserta Reset, filter Penggajian, input tahun melalui mouse/keyboard, tahun tanpa transaksi, rentang lintas tahun, batas input, hasil kosong, serta lebar layar 1600/1440/1024/768/390 px.
+Pengujian terakhir meliputi 18 skenario browser, keseragaman nama/NIP/Bagian pada seluruh pencarian karyawan dan form master terkait, pencarian tunggal dengan filter Bagian, penolakan teks pencarian untuk perhitungan, tujuh laporan beserta Reset, filter Penggajian, input tahun melalui mouse/keyboard, tahun tanpa transaksi, rentang lintas tahun, batas input, hasil kosong, serta lebar layar 1600/1440/1024/768/390 px. Nama panjang dan menu karyawan pada Penggajian, laporan, dan master diperiksa agar tetap berada di dalam layar.
 
 Sepuluh PDF sintetis diperiksa untuk ukuran kertas, beberapa halaman, judul berulang, nama panjang, nominal 18 digit, waktu, dan kesejajaran identitas dengan toleransi maksimum 0,25 pt. Regresi perhitungan, pratinjau/simpan, dashboard, dan laporan juga lolos pada database uji terpisah. Verifikasi terhadap baseline lokal memastikan seluruh kolom data historis tetap identik.
 

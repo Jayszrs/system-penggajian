@@ -51,15 +51,12 @@ module.exports=async function verifyLayout(page,base,fixture,output){
  expect(Math.abs(fields[2].width-fields[3].width)).toBeLessThan(1);
  expect(fields[2].width).toBeGreaterThan(fields[0].width*1.9);
  expect(fields[4].y).toBe(fields[5].y);
- for(const control of await context.locator(':is(.form-control,button.select-dropdown-toggle,button[data-bs-target="#employee-picker"]):visible').all())expect(Math.round((await control.boundingBox()).height)).toBe(48);
- const nip=await page.locator('#employee-nip').boundingBox(),find=await page.getByRole('button',{name:'Cari',exact:true}).boundingBox();expect(Math.abs(find.x-(nip.x+nip.width)-8)).toBeLessThan(1);
- const year=page.locator('#form-year');await year.focus();await expect(page.locator('#form-year-options')).toBeVisible();
- await expect(page.locator('#form-year-options .dropdown-item').first()).toHaveText('2026');
- await year.fill('1988');await year.press('Escape');await expect(year).toHaveValue('1988');expect(await year.evaluate(element=>element.validity.valid)).toBe(true);
- await year.fill('1899');expect(await year.evaluate(element=>element.validity.valid)).toBe(false);
- await year.fill('2026');await year.press('ArrowDown');await page.keyboard.press('Enter');await expect(year).toHaveValue('2026');await expect(page.locator('#form-year-options')).toBeHidden();
+ for(const control of await context.locator(':is(.form-control,button.select-dropdown-toggle):visible').all())expect(Math.round((await control.boundingBox()).height)).toBe(48);
+ await expect(page.getByRole('button',{name:'Cari',exact:true})).toHaveCount(0);await expect(page.locator('#employee-picker')).toHaveCount(0);
+ await checkYear('form-year');
  await page.screenshot({path:path.join(destination,'context-desktop.png'),fullPage:true});
- await page.goto(base+'/transaksi/form?id='+fixture.first.id);await expect(page.locator('#form-year')).toHaveAttribute('readonly');await expect(page.locator('#form-year-toggle')).toBeDisabled();
+ await page.goto(base+'/transaksi/form?id='+fixture.first.id);await expect(page.locator('#form-year')).toHaveAttribute('readonly');await expect(page.locator('#form-year-toggle')).toHaveCount(0);
+ await page.locator('#form-year').focus();await page.keyboard.press('ArrowUp');await expect(page.locator('#form-year')).toHaveValue('2026');await expect(page.locator('#employee-nip-toggle')).toBeDisabled();
  const types=['slip_karyawan','slip_bagian','rekap_bagian','rekap_periode','rekap_periode_bagian','absensi','gapok'];
  for(const type of types){
   await page.goto(base+'/laporan?type='+type);
@@ -112,14 +109,40 @@ module.exports=async function verifyLayout(page,base,fixture,output){
  const payrollBounds=await payroll.boundingBox(),buttonBounds=await payrollButton.boundingBox(),monthBounds=await page.locator('#list-month-toggle').boundingBox(),searchBounds=await page.locator('#list-search').boundingBox();
  expect(buttonBounds.width).toBe(260);expect(Math.abs(buttonBounds.x+buttonBounds.width-(payrollBounds.x+payrollBounds.width-23))).toBeLessThan(1);expect(searchBounds.width).toBeGreaterThan(monthBounds.width*1.8);await expect(payroll.getByRole('link',{name:'Reset',exact:true})).toBeVisible();
  await page.screenshot({path:path.join(destination,'payroll-filters-desktop.png'),fullPage:true});
- await page.locator('#list-search').fill('Karyawan Contoh');await page.locator('#list-search-options [data-select-value="'+fixture.reference.nip+'"]').click();await payrollButton.click();await expect(page.locator('tbody')).toContainText(fixture.reference.nip);
- for(const width of [1440,1024,768,390]){
+ await page.locator('#list-search').fill('Karyawan Contoh');await expect(page.locator('#list-search-options .dropdown-item:visible .employee-option-name')).toHaveText('Karyawan Contoh');await expect(page.locator('#list-search-options .dropdown-item:visible .employee-option-nip')).toHaveText('NIP '+fixture.reference.nip);await page.locator('#list-search-options [data-select-value="'+fixture.reference.nip+'"]').click();await payrollButton.click();await expect(page.locator('tbody')).toContainText(fixture.reference.nip);
+ for(const width of [1600,1440,1024,768,390]){
   await page.setViewportSize({width,height:900});
   await page.goto(base+'/transaksi/form');await noOverflow();
   const positions=await page.locator('.context-field').evaluateAll(elements=>elements.map(element=>element.getBoundingClientRect().y));
   if(width<768)for(let i=1;i<positions.length;i++)expect(positions[i]).toBeGreaterThan(positions[i-1]);
   else if(width<1200){expect(positions[0]).toBe(positions[1]);expect(positions[2]).toBe(positions[3]);}
+  for(const id of ['form-month','form-department','calculation-mode','employee-nip']){
+   const toggle=page.locator('#'+id+'-toggle');await toggle.scrollIntoViewIfNeeded();await toggle.click();
+   const menu=page.locator('#'+id+'-options');await expect(menu).toBeVisible();
+   const bounds=await menu.boundingBox(),field=await toggle.locator('..').boundingBox();
+   expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);expect(bounds.y).toBeGreaterThanOrEqual(0);expect(bounds.y+bounds.height).toBeLessThanOrEqual(901);expect(bounds.height).toBeLessThanOrEqual(320);
+   expect(Math.abs(bounds.width-Math.min(field.width,width-36))).toBeLessThan(1);
+   if(id==='employee-nip'){
+    await expect(menu.locator('input[type=search]')).toHaveCount(0);
+    await expect(menu.locator('[data-select-value="'+fixture.first.nip+'"] .employee-option-name')).toHaveText(fixture.first.name);
+    await page.screenshot({path:path.join(destination,'employee-menu-'+width+'.png')});
+   }
+   await page.keyboard.press('Escape');await expect(menu).toBeHidden();
+  }
   if(width===390)await page.screenshot({path:path.join(destination,'context-mobile.png'),fullPage:true});
+  for(const [route,id] of [['/transaksi','list-search'],['/laporan?type=slip_karyawan','report-employee'],['/laporan?type=rekap_periode','report-employee'],['/master/karyawan','master-search'],['/master/p_anak?new=1','master-nip']]){
+   await page.goto(base+route);
+   const control=page.locator('#'+id),menu=page.locator('#'+id+'-options');
+   if(await control.evaluate(element=>element.tagName==='SELECT')){
+    await page.locator('#'+id+'-toggle').scrollIntoViewIfNeeded();await page.locator('#'+id+'-toggle').click();await menu.locator('input[type=search]').fill(fixture.first.name);
+   }else await control.fill(fixture.first.name);
+   const result=menu.locator('.dropdown-item:visible');await expect(result).toHaveCount(1);await expect(result.locator('.employee-option-name')).toHaveText(fixture.first.name);await expect(result.locator('.employee-option-nip')).toHaveText('NIP '+fixture.first.nip);await expect(result.locator('.employee-option-department')).toHaveText('Bagian: Bagian Cetak Satu');
+   await expect.poll(()=>menu.evaluate(element=>element.getBoundingClientRect().bottom),{message:'Menu within viewport: '+width+' '+route}).toBeLessThanOrEqual(901);
+   const bounds=await menu.boundingBox();expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);expect(bounds.y).toBeGreaterThanOrEqual(0);expect(bounds.height).toBeLessThanOrEqual(320);await noOverflow();
+   if(width===390||width===1600)await page.screenshot({path:path.join(destination,id+'-menu-'+width+'.png')});
+   await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await expect(control).toHaveValue(fixture.first.nip);await expect(menu).toBeHidden();
+   if(id==='master-nip')await expect(page.locator('#master-nip-toggle')).toContainText(fixture.first.name);
+  }
   await page.goto(base+'/transaksi?bulan=9&tahun=2026');await noOverflow();
   const filter=page.locator('.payroll-filters'),show=filter.getByRole('button',{name:'Tampilkan',exact:true}),filterRect=await filter.boundingBox(),showRect=await show.boundingBox();
   const filterPadding=await filter.evaluate(element=>parseFloat(getComputedStyle(element).paddingRight));
@@ -142,5 +165,5 @@ module.exports=async function verifyLayout(page,base,fixture,output){
   }
  }
  expect(writes,'Presentation and Reset must never submit a save/delete POST').toBe(0);page.off('request',record);await page.setViewportSize({width:1600,height:1000});
- console.log('PASS: centered dashboard column, transaction grid, editable years, seven report filters/Reset, payroll Reset, numeric year spinners, invalid/empty/cross-year states, keyboard and four responsive widths; no save/delete POST.');
+ console.log('PASS: centered dashboard column, transaction grid, editable years, seven report filters/Reset, payroll Reset, numeric year spinners, invalid/empty/cross-year states, keyboard, payroll dropdown bounds and five responsive widths; no save/delete POST.');
 };

@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 use App\Core\{Controller,Database};
 use App\Domain\MasterModules;
+use App\Services\PayrollRepository;
 final class MasterController extends Controller {
     public function index(string $module): void {
         $meta=MasterModules::get($module);$table=$meta['table'];$db=Database::connection();$error=null;$edit=null;
@@ -43,8 +44,14 @@ final class MasterController extends Controller {
         $q=$db->prepare("SELECT COUNT(*) FROM `$table` m $join $where");$q->execute($params);$total=(int)$q->fetchColumn();
         $q=$db->prepare("SELECT m.* $extra FROM `$table` m $join $where ORDER BY m.`{$meta['key']}` LIMIT 25 OFFSET $offset");$q->execute($params);
         $suggestionName=match(true){$module==='bagian'=>'m.nama_bagian',$module==='karyawan'=>'m.nama',$meta['key']==='nip'=>'k.nama',default=>'b.nama_bagian'};
-        $searchOptions=$db->query("SELECT m.`{$meta['key']}` AS code,$suggestionName AS name FROM `$table` m $join ORDER BY $suggestionName,m.`{$meta['key']}`")->fetchAll();
-        $this->view('master',['title'=>$meta['title'],'section'=>ucfirst($meta['group']),'module'=>$module,'meta'=>$meta,'rows'=>$q->fetchAll(),'total'=>$total,'page'=>$page,'search'=>$search,'edit'=>$edit,'error'=>$error,'searchOptions'=>$searchOptions,'showForm'=>$edit || isset($_GET['new']) || $error,'departments'=>$db->query('SELECT kd_bagian,nama_bagian FROM bagian ORDER BY kd_bagian')->fetchAll(),'employees'=>$db->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll()]);
+        $suggestionJoin=$join;$suggestionDepartment='';
+        if($meta['key']==='nip'){
+            $employeeAlias=$module==='karyawan'?'m':'k';$departmentAlias=$module==='karyawan'?'b':'employee_bagian';
+            if($module!=='karyawan')$suggestionJoin.=' LEFT JOIN bagian employee_bagian ON employee_bagian.kd_bagian=k.kd_bagian';
+            $suggestionDepartment=",$employeeAlias.kd_bagian,$departmentAlias.nama_bagian";
+        }
+        $searchOptions=$db->query("SELECT m.`{$meta['key']}` AS code,$suggestionName AS name $suggestionDepartment FROM `$table` m $suggestionJoin ORDER BY $suggestionName,m.`{$meta['key']}`")->fetchAll();
+        $this->view('master',['title'=>$meta['title'],'section'=>ucfirst($meta['group']),'module'=>$module,'meta'=>$meta,'rows'=>$q->fetchAll(),'total'=>$total,'page'=>$page,'search'=>$search,'edit'=>$edit,'error'=>$error,'searchOptions'=>$searchOptions,'showForm'=>$edit || isset($_GET['new']) || $error,'departments'=>$db->query('SELECT kd_bagian,nama_bagian FROM bagian ORDER BY kd_bagian')->fetchAll(),'employees'=>(new PayrollRepository())->employeeOptions()]);
     }
     private function find(array $meta,int $id): array|false {if(!isset($meta['table']))throw new \InvalidArgumentException('Modul tidak valid.');$table=$meta['table'];$q=Database::connection()->prepare("SELECT * FROM `$table` WHERE id=? FOR UPDATE");$q->execute([$id]);return $q->fetch();}
 }

@@ -37,7 +37,20 @@ test.describe.serial('Penggajian with restored source fixtures',()=>{
  test('all legacy master modules and full migration archive',async({page})=>{
   test.setTimeout(60000);
   const modules=['bagian','karyawan','tunj_harian','tunj_konsumsi','tunj_lembur','tunj_infal','tunj_overtime','tunj_jam','p_anak','p_bjbs','p_bank','p_lunak','p_lain'];
-  for(const key of modules){const response=await page.goto('/master/'+key);expect(response.status()).toBe(200);await expect(page.locator('h1')).toBeVisible();}
+  for(const key of modules){
+   const response=await page.goto('/master/'+key);expect(response.status()).toBe(200);await expect(page.locator('h1')).toBeVisible();
+   const employees=['karyawan','tunj_jam','p_anak','p_bjbs','p_bank','p_lunak','p_lain'].includes(key);
+   if(employees){
+    await expect(page.locator('#master-search')).toHaveAttribute('data-employee-dropdown');
+    const rows=page.locator('#master-search-options .dropdown-item');await expect(rows.locator('.employee-option-name')).toHaveCount(await rows.count());await expect(rows.locator('.employee-option-nip')).toHaveCount(await rows.count());await expect(rows.locator('.employee-option-department')).toHaveCount(await rows.count());
+    if(key!=='karyawan'){
+     await page.goto('/master/'+key+'?new=1');
+     const choices=page.locator('#master-nip-options .dropdown-item:not([data-select-value=""])');
+     expect(await choices.count()).toBeGreaterThan(0);await expect(choices.locator('.employee-option-name')).toHaveCount(await choices.count());await expect(choices.locator('.employee-option-nip')).toHaveCount(await choices.count());await expect(choices.locator('.employee-option-department')).toHaveCount(await choices.count());
+     await expect(page.locator('#master-nip-options [data-select-value=""] .employee-option-nip')).toHaveCount(0);
+    }
+   }else await expect(page.locator('#master-search')).not.toHaveAttribute('data-employee-dropdown');
+  }
   await page.goto('/migrasi');await expect(page.getByText('19 tabel terarsip')).toBeVisible();await expect(page.getByText('485 baris arsip',{exact:false})).toBeVisible();
   await page.goto('/arsip?table=dbo.Sheet1%24');await expect(page.locator('h1')).toContainText('Sheet1$');
  });
@@ -47,6 +60,35 @@ test.describe.serial('Penggajian with restored source fixtures',()=>{
   await page.goto('/master/tunj_konsumsi?new=1');await page.locator('#master-kd_bagian-toggle').click();await page.locator('#master-kd_bagian-options [data-select-value="TQA01"]').click();await page.locator('#master-jumlah').fill('0');await page.getByRole('button',{name:'Simpan data'}).click();await closeFeedback(page);
   await page.goto('/master/bagian?q=TQA01');await page.getByRole('button',{name:'Hapus TQA01',exact:true}).click();await expect(page.locator('#feedback-modal')).toBeVisible();await page.locator('#feedback-modal').getByRole('button',{name:'Ya, hapus',exact:true}).click();await expect(page.locator('#feedback-modal .feedback-message')).toContainText('masih digunakan');await closeFeedback(page);
  });
+ test('payroll has one employee search, filters departments and never calculates search text',async({page})=>{
+  const requests=[];page.on('request',request=>{if(request.url().endsWith('/api/hitung'))requests.push(request.postData());});
+  await page.goto('/transaksi/form?bulan=11&tahun=2030');
+  const input=page.locator('#employee-nip'),menu=page.locator('#employee-nip-options');
+  await expect(page.getByRole('button',{name:'Cari',exact:true})).toHaveCount(0);await expect(page.locator('#employee-picker')).toHaveCount(0);
+  await expect(menu.locator('input[type=search]')).toHaveCount(0);
+  await input.fill('Karyawan <Uji>');await expect(menu.locator('.dropdown-item:visible')).toHaveCount(1);
+  await expect(menu.locator('.dropdown-item:visible .employee-option-name')).toHaveText('Karyawan <Uji>');
+  await expect(menu.locator('.dropdown-item:visible .employee-option-nip')).toHaveText('NIP 000000000000001');
+  await expect(menu.locator('.dropdown-item:visible .employee-option-department')).toHaveText('Bagian: Bagian pengujian');
+  await expect(page.locator('#employee-name')).toHaveValue('');await page.waitForTimeout(650);expect(requests).toEqual([]);
+  await input.fill('karyawan-tidak-ditemukan');await expect(menu.locator('.dropdown-item:visible')).toHaveCount(0);await expect(menu.locator('.select-dropdown-empty')).toBeVisible();
+  await page.getByRole('button',{name:'Muat komponen master',exact:true}).click();await closeFeedback(page);expect(requests).toEqual([]);
+  await input.fill('Karyawan <Uji>');await input.press('ArrowDown');await page.keyboard.press('Enter');
+  await expect(input).toHaveValue('000000000000001');await expect(page.locator('#employee-name')).toHaveValue('Karyawan <Uji>');
+  await expect(page.locator('#form-department')).toHaveValue('TQA01');await expect(menu).toBeHidden();
+  await page.getByLabel('Hari efektif',{exact:true}).fill('21');await page.getByLabel('Masuk kerja',{exact:true}).fill('21');
+  await page.getByRole('button',{name:'Muat komponen master',exact:true}).click();await expect(page.locator('[data-total=tbersih]')).toHaveText('Rp 1.420.000');
+  expect(requests.every(body=>body.includes('name="nip"\r\n\r\n000000000000001\r\n'))).toBe(true);
+  await input.click();await expect(menu.locator('.dropdown-item:visible')).toHaveCount(1);await page.keyboard.press('Escape');
+  const other=await page.locator('#form-department option').evaluateAll(options=>options.find(option=>option.value&&option.value!=='TQA01').value);
+  await page.locator('#form-department-toggle').click();await page.locator('#form-department-options [data-select-value="'+other+'"]').click();
+  await expect(input).toHaveValue('');await expect(page.locator('#employee-name')).toHaveValue('');
+  const count=requests.length;await input.fill('000000000000001');await expect(menu.locator('.dropdown-item:visible')).toHaveCount(0);
+  await page.getByRole('button',{name:'Simpan penghasilan',exact:true}).click();await closeFeedback(page);await page.waitForTimeout(650);expect(requests).toHaveLength(count);
+  await input.fill('');await page.locator('#form-department-toggle').click();await page.locator('#form-department-options [data-select-value="TQA01"]').click();
+  await input.fill('000000000000001');await input.press('Tab');await expect(page.locator('#employee-name')).toHaveValue('Karyawan <Uji>');
+  expect(await page.locator('#payroll-form').evaluate(form=>new FormData(form).get('nip'))).toBe('000000000000001');
+ });
  test('shared dropdowns validate required choices, search names and sync payroll controls',async({page})=>{
   const failures=[];page.on('pageerror',error=>failures.push(error.message));
   await page.goto('/master/p_anak?new=1');await page.getByRole('button',{name:'Simpan data',exact:true}).click();
@@ -54,8 +96,11 @@ test.describe.serial('Penggajian with restored source fixtures',()=>{
   await expect(page.locator('.select-dropdown .invalid-feedback')).toContainText('terlebih dahulu');
   if(await employeeToggle.getAttribute('aria-expanded')!=='true')await employeeToggle.click();await page.locator('#master-nip-options input[type=search]').fill('Karyawan <Uji>');
   await expect(page.locator('#master-nip-options .dropdown-item:visible')).toHaveCount(1);
+  await expect(page.locator('#master-nip-options .dropdown-item:visible .employee-option-name')).toHaveText('Karyawan <Uji>');await expect(page.locator('#master-nip-options .dropdown-item:visible .employee-option-nip')).toHaveText('NIP 000000000000001');
+  await expect(page.locator('#master-nip-options .dropdown-item:visible .employee-option-department')).toHaveText('Bagian: Bagian pengujian');
   await page.locator('#master-nip-options [data-select-value="000000000000001"]').click();
   await expect(page.locator('#master-nip')).toHaveValue('000000000000001');await expect(employeeToggle).not.toHaveAttribute('aria-invalid');
+  await expect(employeeToggle).toContainText('Karyawan <Uji>');
   await page.goto('/transaksi/form?bulan=10&tahun=2026&bagian=TQA01');
   await page.getByLabel('NIP karyawan',{exact:true}).fill('000000000000001');await page.getByLabel('Hari efektif',{exact:true}).fill('21');await page.getByLabel('Masuk kerja',{exact:true}).fill('21');
   await page.getByRole('button',{name:'Muat komponen master',exact:true}).click();await expect(page.locator('[data-total=tbersih]')).toHaveText('Rp 1.420.000');
@@ -96,6 +141,8 @@ test.describe.serial('Penggajian with restored source fixtures',()=>{
   await page.locator('#report-scope-toggle').click();await page.locator('#report-scope-options [data-select-value="tertentu"]').click();
   await page.getByLabel('Karyawan',{exact:true}).fill('Karyawan <Uji>');await expect(page.locator('#report-employee-options')).toBeVisible();
   await expect(page.locator('#report-employee-options .dropdown-item:visible')).toHaveCount(1);await page.locator('#report-employee-options [data-select-value="000000000000001"]').click();
+  await expect(page.locator('#report-employee-options [data-select-value="000000000000001"] .employee-option-name')).toHaveText('Karyawan <Uji>');await expect(page.locator('#report-employee-options [data-select-value="000000000000001"] .employee-option-nip')).toHaveText('NIP 000000000000001');
+  await expect(page.locator('#report-employee-options [data-select-value="000000000000001"] .employee-option-department')).toHaveText('Bagian: Bagian pengujian');
   await expect(page.getByLabel('Karyawan',{exact:true})).toHaveValue('000000000000001');
   await page.getByRole('button',{name:'Tampilkan',exact:true}).click();await expect(page.locator('.slip')).toBeVisible();await expect(page.locator('.slip-identity')).toContainText('000000000000001');
  });
@@ -106,9 +153,9 @@ test.describe.serial('Penggajian with restored source fixtures',()=>{
   await page.goto('/laporan?type=rekap_periode&dari_bulan=12&dari_tahun=2025&sampai_bulan=1&sampai_tahun=2025&view=1');await expect(page.locator('.alert-danger')).toContainText('tidak boleh melewati');
   await page.goto('/laporan?type=rekap_bagian&bulan=9&tahun=2025&rincian=1&view=1');expect(await page.locator('.detailed-screen .report-table thead tr:last-child th').count()).toBe(35);await page.emulateMedia({media:'print'});await expect(page.locator('.sidebar')).toBeHidden();await page.pdf({path:'storage/qa/rekap-rinci.pdf',format:'A4',landscape:true,printBackground:true});
  });
- test('mobile layout, picker, empty state, CSRF and file protection',async({page})=>{
+ test('mobile layout, employee dropdown, empty state, CSRF and file protection',async({page})=>{
   await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByRole('button',{name:'Buka navigasi'}).click();await expect(page.locator('body')).toHaveClass(/sidebar-open/);await page.keyboard.press('Escape');await expect(page.locator('body')).not.toHaveClass(/sidebar-open/);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.getByRole('button',{name:'Pilih bulan',exact:true}).click();await page.locator('.period-month-menu').getByRole('button',{name:'September',exact:true}).click();await page.locator('#period-year').fill('2025');await page.getByRole('button',{name:'Terapkan periode',exact:true}).click();await expect(page.getByText('Periode September 2025',{exact:true})).toBeVisible();await page.screenshot({path:'storage/qa/dashboard-mobile.png',fullPage:true});
-  await page.goto('/transaksi/form');await page.getByRole('button',{name:'Cari',exact:true}).click();await page.getByLabel('Cari NIP atau nama').fill('000000000000001');await expect(page.locator('.picker-result')).toHaveCount(1);await page.locator('.picker-result').click();await expect(page.getByLabel('NIP karyawan',{exact:true})).toHaveValue('000000000000001');
+  await page.goto('/transaksi/form');await page.getByLabel('NIP karyawan',{exact:true}).fill('000000000000001');await expect(page.locator('#employee-nip-options .dropdown-item:visible')).toHaveCount(1);await page.locator('#employee-nip-options [data-select-value="000000000000001"]').click();await expect(page.getByLabel('NIP karyawan',{exact:true})).toHaveValue('000000000000001');await expect(page.locator('#employee-name')).toHaveValue('Karyawan <Uji>');
   await page.goto('/?bulan=1&tahun=2099');await expect(page.getByText('Belum ada transaksi pada periode ini',{exact:true})).toBeVisible();
   const csrf=await page.request.post('/api/hitung',{form:{hefektif:'21'}});expect(csrf.status()).toBe(419);
   for(const path of ['/storage/legacy/export.json','/.env.example','/app/bootstrap.php','/scripts/install.php','/package.json']){const response=await page.request.get(path);expect(response.status()).toBe(403);}

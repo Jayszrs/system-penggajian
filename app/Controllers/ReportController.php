@@ -45,7 +45,7 @@ final class ReportController extends Controller {
             }
         }
         $rangeLabel=$isRange?month_name($startMonth).' '.$startYear.' – '.month_name($endMonth).' '.$endYear:month_name($period['bulan']).' '.$period['tahun'];
-        $employees=$db->query('SELECT nip,nama FROM karyawan ORDER BY nama')->fetchAll();
+        $employees=$repo->employeeOptions();
         $detailed=!$isSlip&&!in_array($type,['gapok','absensi'],true)&&($_GET['rincian']??'')==='1';
         $print=PrintLayout::metadata((string)$_SESSION['user']['name']);
         $yearOptions=$repo->years([$period['tahun'],$startYear,$endYear]);

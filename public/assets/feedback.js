@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
   let timer,abortController,revision=0,busy=false,lastMode=mode.value;
   const sourceFields=[['karyawan','t_harian','Tarif harian karyawan'],['karyawan','t_lembur','Tarif lembur karyawan'],['tunj_konsumsi','jumlah','Tarif konsumsi bagian'],['tunj_infal','jumlah','Tarif infal bagian'],['tunj_overtime','jumlah','Tarif overtime bagian']];
   const updateMode=()=>{for(const field of derived){const input=form.querySelector('[name="'+field+'"]');if(input)input.readOnly=mode.value==='master';}form.querySelector('[name=lain1]').readOnly=false;};
-  const invalidate=()=>{revision++;abortController?.abort();tokenInput.value='';acceptedInput.value='0';status.textContent='Ada perubahan; ringkasan akan diperiksa kembali.';};
+  const invalidate=()=>{revision++;abortController?.abort();loadButton.disabled=false;tokenInput.value='';acceptedInput.value='0';status.textContent='Ada perubahan; ringkasan akan diperiksa kembali.';};
   const apply=data=>{
    for(const [field,value] of Object.entries(data.values||{})){
     const input=form.querySelector('[name="'+field+'"]');
@@ -99,6 +99,12 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   const calculate=async options=>{
    options=options||{};clearTimeout(timer);abortController?.abort();abortController=new AbortController();const current=++revision;
+   if(payrollEmployeeSelection&&!payrollEmployeeSelection.isValid()){
+    loadButton.disabled=false;
+    status.textContent='Pilih karyawan untuk memeriksa perhitungan.';
+    if(options.explicit)form.querySelector('[name=nip]').reportValidity();
+    return null;
+   }
    loadButton.disabled=true;
    try{
     const body=new FormData(form);body.set('load_defaults',mode.value==='master'?'1':'0');
@@ -131,17 +137,11 @@ document.addEventListener('DOMContentLoaded', function () {
   loadButton.addEventListener('click',loadMaster);
   form.addEventListener('input',event=>{
    if(!event.target.matches('[data-payroll-value],[name=bulan],[name=tahun],[name=nip],[name=bagian]'))return;
-   invalidate();clearTimeout(timer);timer=setTimeout(()=>calculate(),450);
-  });
-  form.querySelector('[name=nip]')?.addEventListener('change',async event=>{
-   invalidate();const nip=event.target.value;
-   try{
-    const response=await fetch(appUrl('api/karyawan')+'?'+new URLSearchParams({q:nip}),{headers:{Accept:'application/json'}});const data=await readResponse(response);
-    if(!response.ok)throw {...data,status:response.status};
-    if(event.target.value!==nip)return;
-    const employee=data.employees.find(row=>row.nip===nip);document.getElementById('employee-name').value=employee?.nama||'';
-    if(employee){const department=form.querySelector('[name=bagian]');if(!department.disabled){department.value=employee.kd_bagian;syncDropdown(department);}}
-   }catch(error){inline.hidden=false;inline.textContent=error.error||'Identitas karyawan belum dapat diperiksa.';inline.className='alert alert-warning';}
+   invalidate();clearTimeout(timer);
+   if(payrollEmployeeSelection&&!payrollEmployeeSelection.isValid()){
+    inline.hidden=true;status.textContent='Pilih karyawan untuk memeriksa perhitungan.';return;
+   }
+   timer=setTimeout(()=>calculate(),450);
   });
   form.addEventListener('submit',async event=>{
    event.preventDefault();if(busy)return;busy=true;saveButton.disabled=true;
