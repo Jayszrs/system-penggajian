@@ -166,6 +166,65 @@
  [data-number-format]{font-variant-numeric:tabular-nums}
 }
 .page-heading h1{margin-block:0}
+
+/* Source-to-destination evidence on Data & Migrasi. */
+.migration-trace{display:grid;gap:22px;min-width:0}
+.migration-trace>.surface,.migration-trace .panel-body{min-width:0}
+.migration-trace .panel-header{gap:14px;flex-wrap:wrap}
+.migration-trace h3{font-size:1rem;margin:0 0 12px}
+.migration-trace .filter-bar{border-bottom:0;align-items:flex-end}
+.migration-trace .filter-bar .field{max-width:640px;min-width:180px}
+.migration-trace .filter-bar .form-control,.migration-trace .filter-bar .btn{min-height:44px}
+.migration-search-actions{display:flex;gap:10px;flex-wrap:wrap}
+.migration-trace .table-responsive{max-width:100%}
+.migration-inventory-table{min-width:960px}
+.migration-inventory-table th{white-space:normal;vertical-align:bottom}
+.migration-inventory-table td{vertical-align:top}
+.migration-inventory-table td:first-child{min-width:170px}
+.migration-inventory-table td:last-child{min-width:270px;max-width:400px;white-space:normal}
+.migration-trace .badge-verified,.migration-trace .badge-pending{display:inline-block;white-space:normal;line-height:1.5}
+.migration-trace .muted-small{overflow-wrap:anywhere}
+.migration-evidence p{max-width:85ch}
+.migration-run+.migration-run{border-top:1px solid var(--border,#e4ece6)}
+.migration-run>summary,.migration-record>summary{display:flex;align-items:center;gap:14px;justify-content:space-between;padding:16px 0;cursor:pointer;list-style:none}
+.migration-run>summary::-webkit-details-marker,.migration-record>summary::-webkit-details-marker{display:none}
+.migration-run>summary::after,.migration-record>summary::after{content:'';width:8px;height:8px;flex:0 0 8px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin:0 4px 4px 2px}
+.migration-run[open]>summary::after,.migration-record[open]>summary::after{transform:rotate(225deg);margin-top:6px}
+.migration-run>summary:focus-visible,.migration-record>summary:focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:4px}
+.migration-run>summary>span:first-child,.migration-record>summary>span:first-child{min-width:0;flex:1}
+.migration-run summary strong,.migration-record summary strong{font-size:.875rem;display:block;overflow-wrap:anywhere}
+.migration-run summary small,.migration-record summary small{font-size:.75rem;display:block;margin-top:5px;color:var(--muted);overflow-wrap:anywhere}
+.migration-run-content{padding:0 0 16px}
+.migration-source-hash{overflow-wrap:anywhere;margin-bottom:0;font-variant-numeric:tabular-nums}
+.migration-issues{padding-left:20px;font-size:.8125rem;color:var(--text-secondary);line-height:1.7;margin:14px 0 0;overflow-wrap:anywhere}
+.migration-record{border-top:1px solid var(--border,#e4ece6)}
+.migration-record-state{font-size:.75rem;color:var(--text-secondary);max-width:40%;text-align:right;overflow-wrap:anywhere}
+.migration-record-content{padding-bottom:16px;min-width:0}
+.migration-record-content>.muted-small{margin-bottom:12px;max-width:85ch}
+.migration-record-links{display:flex;align-items:center;flex-wrap:wrap;gap:10px 18px;padding:5px 0 13px;font-size:.8125rem}
+.migration-record-links a,.migration-reference-list a{display:inline-flex;gap:4px;align-items:center}
+.migration-record-links .icon,.migration-reference-list .icon{width:14px;height:14px}
+.migration-comparison-table{min-width:630px;margin-bottom:12px}
+.migration-scroll-note{display:none}
+.migration-table-issues{margin-top:10px;font-size:.8125rem}
+.migration-table-issues>summary{cursor:pointer}
+.migration-table-issues .migration-issues{margin-top:8px}
+.migration-comparison-table th{white-space:normal}
+.migration-comparison-table td{vertical-align:top;white-space:normal}
+.migration-comparison-table td:first-child{min-width:190px}
+.migration-comparison-table .migration-value{min-width:145px;max-width:350px;white-space:pre-wrap;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.migration-comparison-table .cell-subtitle{overflow-wrap:anywhere}
+.migration-field-state{font-size:.75rem;color:var(--text-secondary)}
+.migration-field-state.is-match{color:var(--green)}
+.migration-field-state.is-different{font-weight:550}
+.migration-match-list,.migration-reference-list{padding:0;margin:0;list-style:none}
+.migration-match-list li+li,.migration-reference-list li+li{border-top:1px solid var(--border,#e4ece6)}
+.migration-match-list a{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 14px;padding:14px 0}
+.migration-match-list strong{overflow-wrap:anywhere;font-size:.875rem}
+.migration-match-list span{grid-column:1;color:var(--muted);font-size:.8125rem;overflow-wrap:anywhere}
+.migration-match-list .icon{grid-row:1/3;grid-column:2;align-self:center}
+.migration-reference-list li{display:flex;gap:10px 20px;flex-wrap:wrap;align-items:center;padding:12px 0;font-size:.8125rem}
+@media(max-width:760px){.migration-trace{gap:18px}.migration-trace .panel-body{padding-left:18px;padding-right:18px}.migration-trace .filter-bar .field{flex-basis:100%;min-width:0;max-width:none}.migration-search-actions{width:100%}.migration-search-actions .btn{flex:1}.migration-record>summary,.migration-run>summary{gap:10px}.migration-record-state{max-width:44%}.migration-run>summary>.badge-verified,.migration-run>summary>.badge-pending{max-width:40%;font-size:.6875rem}.migration-employee-detail .panel-header .btn{min-height:40px}.migration-scroll-note{display:block;font-size:.75rem;color:var(--muted);margin:0 0 9px}.migration-record-content .table-responsive{margin-inline:-18px;padding-inline:18px;max-width:calc(100% + 36px)}}
 /* Shared document typography and the legacy A5 payslip. */
 .report-print-heading{display:none}
 .print-document-heading{text-align:center;font-family:"Times New Roman",Times,serif;color:#000;padding-bottom:4mm}

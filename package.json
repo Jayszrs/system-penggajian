@@ -1,6 +1,6 @@
 {
   "name": "penggajian-mutiara-hikmah",
   "private": true,
-  "scripts": {"test:browser": "php scripts/prepare-test.php && playwright test", "test:print": "node tests/print-layout.js"},
+  "scripts": {"test:browser": "php scripts/prepare-test.php && playwright test", "test:print": "node tests/print-layout.js", "test:migration": "php tests/legacy-migration.php && node tests/legacy-migration-browser.js"},
   "devDependencies": {"@playwright/test": "1.64.1"}
 }

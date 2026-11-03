@@ -41,7 +41,11 @@ final class DashboardController extends Controller {
     }
     public function migration(): void {
         $db=Database::connection();
-        $this->view('migration',['title'=>'Data & Migrasi','section'=>'Sistem','runs'=>$db->query('SELECT * FROM migration_runs ORDER BY id DESC LIMIT 10')->fetchAll(),'tables'=>$db->query('SELECT table_name,row_count,content_sha256 FROM legacy_tables ORDER BY table_name')->fetchAll()]);
+        $trace=new \App\Services\LegacyMigrationTrace($db);$migrationTrace=$trace->overview();
+        $requested=$_GET['nip']??'';$employeeQuery=is_string($requested)?trim($requested):'';
+        $employeeTrace=$employeeQuery!==''?$trace->employee($employeeQuery):null;$employeeMatches=[];
+        if($employeeQuery!=='' && !$employeeTrace)foreach($migrationTrace['employees'] as $employee)if(mb_stripos((string)$employee['nip'],$employeeQuery)!==false || mb_stripos((string)$employee['nama'],$employeeQuery)!==false)$employeeMatches[]=$employee;
+        $this->view('migration',['title'=>'Data & Migrasi','section'=>'Sistem','migrationTrace'=>$migrationTrace,'employeeTrace'=>$employeeTrace,'employeeQuery'=>$employeeQuery,'employeeMatches'=>$employeeMatches,'runs'=>$migrationTrace['runs'],'tables'=>$migrationTrace['tables']]);
     }
     public function archive(): void {
         $db=Database::connection();$table=(string)($_GET['table']??'');$q=$db->prepare('SELECT * FROM legacy_tables WHERE table_name=?');$q->execute([$table]);$metadata=$q->fetch();

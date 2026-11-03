@@ -19,4 +19,5 @@ foreach (['p_anak','p_bjbs','p_bank','p_lunak','p_lain','tabungan'] as $table) {
     $db->exec("CREATE TABLE IF NOT EXISTS `$table` (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,nip VARCHAR(15) NOT NULL,jumlah DECIMAL(18,0) NULL DEFAULT 0,UNIQUE KEY uq_nip(nip)) ENGINE=InnoDB");
 }
 require __DIR__.'/migrate-accounting.php';
+require __DIR__.'/migrate-legacy-metadata.php';
 echo "Database $name siap. Buka aplikasi untuk membuat akun pertama.\n";

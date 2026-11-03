@@ -45,18 +45,17 @@ PHP ditemukan dari PATH terminal atau folder `bin/php` Laragon relatif terhadap 
 
 Backup sumber adalah native SQL Server 2008 R2 (`10.50`), dengan nama database `gaji_bmt`. `gaji.exe` menyebut katalog `gaji`; aplikasi baru memakai data backup yang diberikan.
 
-Pemulihan yang sudah dilaksanakan menggunakan image resmi `mcr.microsoft.com/mssql/server:2022-latest` pada container `penggajian-sql-audit`, hanya terikat ke loopback port `11433`. File backup dipasang hanya baca, dan database audit diubah menjadi hanya baca setelah pemeriksaan.
+Migrasi dijalankan otomatis melalui satu perintah, termasuk persiapan Docker/SQL Server audit, restore salinan baru, ekspor seluruh sumber, backup MySQL yang diuji pemulihannya, rekonsiliasi, serta pemeriksaan hasil:
 
 ```powershell
-powershell -NoProfile -File scripts/start-audit.ps1
-powershell -NoProfile -File scripts/restore-legacy.ps1
-php scripts/migrate-legacy.php
-docker stop penggajian-sql-audit
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/migrate-legacy.ps1 -BackupPath "$env:USERPROFILE\Downloads\GAJI-5.dat"
 ```
 
-Skrip start menyiapkan container audit dan kredensial acak lokal di `storage/legacy/sql-secret.json` bila belum tersedia. Tunggu SQL Server siap sebelum menjalankan restore; jangan menyalin kredensial ke repositori. Jangan gunakan database aktif sebagai target pemulihan. File sumber dapat ditentukan dengan parameter `-BackupPath` pada kedua skrip.
+Target MySQL mengikuti `.env`. Proses tidak meminta konfirmasi pengguna. Backup sumber dipasang hanya baca; container audit hanya membuka port loopback dan dihentikan setelah proses. Kredensial, backup, ekspor, serta laporan privat berada dalam `storage/legacy/<SHA-256>/<proses>/`, diabaikan Git, dan dilindungi dari HTTP.
 
-Skrip impor menolak menimpa tabel operasional yang sudah berisi data. Backup sama yang sudah terverifikasi tidak diimpor dua kali. Untuk mencoba backup lain, gunakan database MySQL baru. Arsip dan ekspor berada di `storage/legacy/`, dilindungi dari HTTP dan diabaikan Git. Jangan menghapusnya bila masih diperlukan untuk audit/pemulihan.
+Backup yang sama tetap direkonsiliasi meskipun pernah terverifikasi. Baris yang belum tersedia ditambahkan otomatis jika identitas dan relasinya valid. Perubahan/tambahan lokal dan penghapusan yang tercatat dipertahankan. Master kosong tidak diisi dari transaksi historis. Pengulangan identik tidak menulis ulang data atau metadata. Sumber berbeda pada database yang sudah memiliki arsip ditolak; gunakan database terpisah.
+
+Halaman **Data & Migrasi** menyediakan inventaris tabel, status pemetaan, pencarian nama/NIP, serta pembandingan setiap master dan komponen historis dengan arsip. Panduan lengkap, aturan konflik, dan pilihan audit hanya baca tersedia pada [Migrasi otomatis](docs/MIGRASI_OTOMATIS.md).
 
 ### Hasil rekonsiliasi backup yang diberikan
 
@@ -81,7 +80,7 @@ Skrip impor menolak menimpa tabel operasional yang sudah berisi data. Backup sam
 - **Transaksi Penghasilan:** pilih periode, bagian, dan karyawan; masukkan hari efektif serta kehadiran. Mode **Hitung dari master saat ini** memakai tarif/master sekarang. Mode **Nilai komponen transaksi** mempertahankan komponen masukan; digunakan sebagai default saat membuka transaksi tersimpan.
 - **Muat komponen master** mengaktifkan perhitungan dari master. Jangan gunakan untuk transaksi historis kecuali memang hendak menghitung ulang dengan master saat ini.
 - **Slip & Laporan:** tujuh jenis keluaran, cakupan semua/tertentu, rentang lintas tahun, seluruh komponen, subtotal bagian, serta cetak atau simpan PDF melalui dialog browser. Cetak seluruh komponen dipisah menjadi tabel penghasilan, potongan, kehadiran, dan ringkasan agar tidak terpotong pada kertas landscape.
-- **Data & Migrasi:** riwayat rekonsiliasi dan seluruh tabel arsip hanya baca.
+- **Data & Migrasi:** riwayat rekonsiliasi, status setiap tabel, pencarian karyawan, serta pembandingan master dan komponen historis dengan arsip hanya baca.
 - **Profil:** ubah nama atau kata sandi menggunakan kata sandi saat ini.
 
 Setiap simpan melewati evaluasi server; nilai total yang dikirim browser tidak dipercaya. Komponen yang berubah dihitung ulang, sedangkan penyimpanan tanpa perubahan mempertahankan nominal sebelumnya. Transaksi NIP/periode sama ditolak dan pengguna perlu membuka transaksi yang sudah ada. Perubahan tarif master tidak mengubah transaksi historis secara otomatis.
@@ -110,7 +109,7 @@ php tests/report-accounting.php
 php tests/dashboard-accounting.php
 ```
 
-`tests/run.php` memerlukan ekspor SQL Server lokal di `storage/legacy/export.json` dan database hasil migrasi sebagai pembanding hanya baca: 332 fixture transaksi, 332 rumus absensi, dan 485 checksum arsip. Pengujian kalkulasi dan konfirmasi merupakan fixture murni tanpa koneksi database. Pengujian laporan/dashboard membaca transaksi dalam database yang dikonfigurasi melalui transaksi hanya baca; keluarannya tidak memuat nominal atau identitas karyawan.
+`tests/run.php` memerlukan ekspor SQL Server lokal (argumen path, ekspor lama, atau ekspor proses terbaru) dan database hasil migrasi sebagai pembanding hanya baca. Ekspektasi mengikuti manifest sumber; setiap kolom master/transaksi, relasi, checksum arsip, dan total baris sumber diperiksa tanpa menghitung tambahan lokal sebagai data sumber. Pengujian kalkulasi dan konfirmasi merupakan fixture murni tanpa koneksi database. Pengujian laporan/dashboard membaca transaksi dalam database yang dikonfigurasi melalui transaksi hanya baca; keluarannya tidak memuat nominal atau identitas karyawan.
 
 Setelah database uji disiapkan oleh suite browser, jalankan `php tests/calculator-integration.php` untuk pemetaan tarif/master dan `php tests/workflow-accounting.php` untuk pratinjau, konfirmasi, simpan, serta benturan revisi. Keduanya membatasi penulisan ke `penggajian_test`; fixture integrasi di-rollback dan fixture alur dibersihkan setelah pemeriksaan. Jangan mengarahkannya ke database kerja.
 
@@ -134,6 +133,7 @@ Setelah suite browser selesai, jalankan `node tests/laragon-routing.js` untuk me
 
 ## Dokumen teknis dan batas verifikasi
 
+- `docs/MIGRASI_OTOMATIS.md`: perintah otomatis, rekonsiliasi, pelestarian lokal, dan penelusuran karyawan.
 - `docs/KAMUS_DATA.md`: seluruh tabel/kolom database hasil restore dan pemetaannya.
 - `docs/PEMETAAN_LEGACY.md`: form, handler, sumber tarif, pemetaan field, dan rumus yang ditelusuri dari EXE.
 - `docs/VERIFIKASI.md`: hasil pemeriksaan dan keterbatasan.
