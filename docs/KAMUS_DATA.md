@@ -267,3 +267,16 @@ Indeks sumber: 0. Relasi foreign key: 0.
 Semua nominal dan jumlah sumber menggunakan `numeric(18,0)`; operasional memakai `DECIMAL(18,0)`. Kode/NIP tetap teks. Kolom nama operasional diperlebar untuk input baru tanpa memotong data impor. Metadata presisi, panjang, collation, nullable, identity, default, serta nilai NULL sumber tetap dipertahankan pada arsip.
 
 Tabel aplikasi tambahan: `app_users`, `login_attempts`, `audit_log`, `migration_runs`, `legacy_tables`, `legacy_records`, dan `app_settings`. Akun `orang` diarsipkan; autentikasi baru memakai `app_users` dengan password hash.
+
+## Metadata kalkulasi operasional
+
+Metadata berikut merupakan tambahan aplikasi pada tabel `penghasilan`, bukan kolom sumber SQL Server. Seluruh 32 kolom sumber penghasilan tetap dipertahankan.
+
+| Kolom tambahan | Tipe MySQL | NULL | Default | Fungsi |
+|---|---|---|---|---|
+| `calculation_version` | `VARCHAR(24)` | Tidak | `legacy_v1` | Menandai semantik perhitungan; transaksi baru/perubahan hitung memakai `accounting_v2` |
+| `calculation_snapshot` | `JSON` | Ya | `NULL` | Dasar perhitungan: versi kebijakan, mode, periode, kuantitas, sumber tarif dan aturan yang digunakan |
+
+`scripts/migrate-accounting.php` menambahkan kolom yang belum tersedia tanpa menghitung ulang nominal. `scripts/install.php` memanggil migrasi ini untuk instalasi baru maupun skema yang sudah ada. Nilai `NULL` pada snapshot histori berarti dasar tarif historis belum tersedia; aplikasi tidak menyimpulkannya dari master saat ini. Jika histori disimpan tanpa perubahan komponen, nominal dan versi tetap mengikuti record sebelumnya.
+
+Versi `accounting_v2` menghitung total dari komponen yang telah dibulatkan ke rupiah. Master `p_lain` mengisi `plain` (potongan), sedangkan `lain1` tetap kolom penghasilan manual. Ini tidak mengubah binding atau nominal sumber yang disimpan dalam arsip `legacy_records`.

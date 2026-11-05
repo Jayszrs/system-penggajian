@@ -20,10 +20,16 @@ ini_set('display_errors', ($_ENV['APP_DEBUG'] ?? '') === 'true' ? '1' : '0');
 ini_set('log_errors', '1');
 ini_set('error_log', BASE_PATH . '/storage/app.log');
 set_exception_handler(static function (Throwable $e): void {
+    if($e instanceof App\Domain\PayrollValidationException){
+        http_response_code(422);
+        if(expects_json())json_response(['error'=>$e->getMessage(),'issues'=>$e->issues],422);
+        $errorMessage=$e->getMessage();$feedback=['severity'=>'error','title'=>'Periksa data yang diminta','message'=>$errorMessage,'issues'=>$e->issues];
+        require BASE_PATH.'/app/Views/error.php';return;
+    }
     $id = bin2hex(random_bytes(4));
     error_log(date('c') . " [$id] " . $e . PHP_EOL, 3, BASE_PATH . '/storage/app.log');
     http_response_code(500);
-    if (str_starts_with(app_request_path(), '/api/')) {
+    if (expects_json()) {
         header('Content-Type: application/json'); echo json_encode(['error'=>'Permintaan belum berhasil. Silakan coba kembali.','reference'=>$id]); return;
     }
     $errorMessage = 'Aplikasi belum dapat memproses permintaan. Periksa koneksi database atau hubungi pengelola.';

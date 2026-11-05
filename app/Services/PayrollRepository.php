@@ -2,21 +2,44 @@
 declare(strict_types=1);
 namespace App\Services;
 use App\Core\Database;
+use App\Domain\{PayrollPeriod,PayrollValidationException};
 final class PayrollRepository {
     public function period(): array {
-        $last=Database::connection()->query("SELECT bulan,tahun FROM penghasilan WHERE bulan REGEXP '^[0-9]+$' AND tahun REGEXP '^[0-9]{4}$' ORDER BY CAST(tahun AS UNSIGNED) DESC,CAST(bulan AS UNSIGNED) DESC LIMIT 1")->fetch();
-        $rawMonth=(string)($_GET['bulan']??$last['bulan']??date('n'));$rawYear=(string)($_GET['tahun']??$last['tahun']??date('Y'));
-        $month=ctype_digit($rawMonth)?filter_var((string)(int)$rawMonth,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>12]]):false;
-        $year=ctype_digit($rawYear)?filter_var((string)(int)$rawYear,FILTER_VALIDATE_INT,['options'=>['min_range'=>1900,'max_range'=>9999]]):false;
-        return ['bulan'=>$month?: (int)date('n'),'tahun'=>$year?:(int)date('Y'),'bagian'=>trim((string)($_GET['bagian']??''))];
+        $last=Database::connection()->query("SELECT bulan,tahun FROM penghasilan WHERE bulan REGEXP '^[0-9]{1,2}$' AND tahun REGEXP '^[0-9]{4}$' AND CAST(bulan AS UNSIGNED) BETWEEN 1 AND 12 AND CAST(tahun AS UNSIGNED) BETWEEN 1900 AND 9999 ORDER BY CAST(tahun AS UNSIGNED) DESC,CAST(bulan AS UNSIGNED) DESC,id DESC LIMIT 1")->fetch();
+        $month=PayrollPeriod::value(array_key_exists('bulan',$_GET)?$_GET['bulan']:($last['bulan']??date('n')),'Bulan',1,12);
+        $year=PayrollPeriod::value(array_key_exists('tahun',$_GET)?$_GET['tahun']:($last['tahun']??date('Y')),'Tahun',1900,9999);
+        $raw=$_GET['bagian']??'';
+        if(!is_string($raw))throw new PayrollValidationException('Bagian tidak valid.','bagian','invalid_department');
+        $department=trim($raw);
+        if($department!==''){
+            $q=Database::connection()->prepare('SELECT 1 FROM bagian WHERE kd_bagian=? UNION ALL SELECT 1 FROM penghasilan WHERE department_code=? LIMIT 1');$q->execute([$department,$department]);
+            if(!$q->fetchColumn())throw new PayrollValidationException('Bagian yang dipilih tidak ditemukan.','bagian','invalid_department');
+        }
+        return ['bulan'=>$month,'tahun'=>$year,'bagian'=>$department];
     }
     public function departments(): array { return Database::connection()->query('SELECT * FROM bagian ORDER BY kd_bagian')->fetchAll(); }
-    public function find(int $id): array|false {
-        $q=Database::connection()->prepare('SELECT p.*,COALESCE(p.employee_name,k.nama) AS nama,COALESCE(p.department_code,k.kd_bagian) AS kd_bagian,COALESCE(p.department_name,b.nama_bagian) AS nama_bagian FROM penghasilan p LEFT JOIN karyawan k ON k.nip=p.nip LEFT JOIN bagian b ON b.kd_bagian=k.kd_bagian WHERE p.id=?');$q->execute([$id]);return $q->fetch();
+    public function employeeOptions(): array {
+        return Database::connection()->query('SELECT k.nip,k.nama,k.kd_bagian,b.nama_bagian FROM karyawan k LEFT JOIN bagian b ON b.kd_bagian=k.kd_bagian ORDER BY k.nama,k.nip')->fetchAll();
     }
+    /** Suggestions only: any valid year may still be entered directly. */
+    public function years(array $selected = []): array {
+        $years = Database::connection()->query("SELECT DISTINCT CAST(tahun AS UNSIGNED) FROM penghasilan WHERE tahun REGEXP '^[0-9]{4}$' AND CAST(tahun AS UNSIGNED) BETWEEN 1900 AND 9999")->fetchAll(\PDO::FETCH_COLUMN);
+        foreach ([(int)date('Y'), ...$selected] as $year) {
+            if ((is_int($year) || is_string($year)) && ctype_digit((string)$year) && (int)$year >= 1900 && (int)$year <= 9999) $years[] = (int)$year;
+        }
+        $years = array_values(array_unique(array_map('intval', $years))); rsort($years, SORT_NUMERIC);
+        return $years;
+    }
+    public function find(int $id,bool $forUpdate=false): array|false {
+        $code=self::departmentCodeSql();$name=self::employeeNameSql();$department=self::departmentNameSql();
+        $q=Database::connection()->prepare("SELECT p.*,$name AS nama,$code AS kd_bagian,$department AS nama_bagian FROM penghasilan p LEFT JOIN karyawan k ON k.nip=p.nip LEFT JOIN bagian b ON b.kd_bagian=$code WHERE p.id=?".($forUpdate?' FOR UPDATE':''));$q->execute([$id]);return $q->fetch();
+    }
+    public static function departmentCodeSql(string $alias='p',string $employeeAlias='k'): string { return "COALESCE(NULLIF($alias.department_code,''),$employeeAlias.kd_bagian,'')"; }
+    public static function employeeNameSql(string $alias='p',string $employeeAlias='k'): string { return "COALESCE(NULLIF($alias.employee_name,''),$employeeAlias.nama,$alias.nip)"; }
+    public static function departmentNameSql(string $alias='p',string $departmentAlias='b'): string { return "COALESCE(NULLIF($alias.department_name,''),$departmentAlias.nama_bagian,'Tanpa bagian')"; }
     public static function scope(array $period, string $alias='p'): array {
         $where="CAST($alias.bulan AS UNSIGNED)=? AND CAST($alias.tahun AS UNSIGNED)=?"; $params=[$period['bulan'],$period['tahun']];
-        if ($period['bagian']!=='') {$where.=" AND COALESCE($alias.department_code,k.kd_bagian)=?";$params[]=$period['bagian'];}
+        if ($period['bagian']!=='') {$where.=' AND '.self::departmentCodeSql($alias).'=?';$params[]=$period['bagian'];}
         return [$where,$params];
     }
     public static function moneySum(array $values): string { $sum='0';foreach($values as $v)$sum=bcadd($sum,(string)($v??'0'),0);return $sum; }

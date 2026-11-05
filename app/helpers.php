@@ -18,9 +18,11 @@ function url(string $path = '', array $query = []): string {
     if ($base !== '' && $path !== $base && !str_starts_with($path, $base . '/') && !str_starts_with($path, $base . '?')) $path = $base . $path;
     return $path . ($query ? (str_contains($path, '?') ? '&' : '?') . http_build_query($query) : '');
 }
+function expects_json(): bool { return str_starts_with(app_request_path(),'/api/') || strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH']??'','XMLHttpRequest')===0; }
 function redirect(string $path): never {
     $target = url(str_replace(['\\', "\r", "\n", "\0"], '/', $path));
     if (!str_starts_with($target, '/') || str_starts_with($target, '//') || str_contains($target, '://')) $target = '/';
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && expects_json()) json_response(['saved' => true, 'redirect' => $target]);
     header("Location: $target", true, 303);
     exit;
 }

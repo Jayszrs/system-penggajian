@@ -41,9 +41,9 @@ Pemetaan penting tidak mengikuti dugaan dari nama kolom:
 - `p_bjbs.jumlah` → `pinjaman_bsm` (BJBS/BPJSKET), handler `0x49cebf–0x49d0de`.
 - `p_bank.jumlah` → `arisan` (Pinjaman Bank), handler `0x49d6c9–0x49d8e8`.
 - `p_lunak.jumlah` → `pinjaman_lunak`; `p_anak.jumlah` → `p_anak`.
-- `p_lain.jumlah` → **`lain1`, komponen penghasilan**, handler `0x49dace–0x49dced`. `plain` tetap potongan lain-lain yang terpisah. Perilaku ini dipertahankan, tidak dibetulkan berdasarkan dugaan nama master.
+- `p_lain.jumlah` → **`lain1`, komponen penghasilan**, handler `0x49dace–0x49dced`. Ini adalah bukti perilaku **aplikasi lama**, bukan klasifikasi untuk transaksi baru. Kolom dan nominal transaksi historis dipertahankan; pada `accounting_v2`, master `p_lain` mengisi `plain` sebagai potongan lain-lain dan `lain1` tetap penghasilan manual.
 
-## Kalkulasi
+## Kalkulasi yang dibuktikan pada aplikasi lama
 
 | Komponen | Aturan | Bukti |
 |---|---|---|
@@ -65,7 +65,9 @@ Master tunjangan harian dan lembur tetap tersedia meskipun handler transaksi yan
 
 ## Pembulatan dan batas
 
-Penyimpanan sumber menggunakan `numeric(18,0)`. Hasil pecahan dibulatkan setengah menjauh dari nol saat konversi SQL. Aplikasi memakai BCMath untuk nominal, menghitung bruto/potongan/bersih sebelum pembulatan penyimpanan per kolom, dan membatasi hasil ke 18 digit. Grafik menggunakan angka JavaScript hanya untuk visualisasi; angka tabel/rekonsiliasi tetap string desimal.
+Penyimpanan sumber menggunakan `numeric(18,0)`. Hasil pecahan dibulatkan setengah menjauh dari nol saat konversi SQL. Aplikasi lama menghitung total dari hasil antara sebelum pembulatan penyimpanan per kolom; kasus pecahan sintetis dapat menghasilkan selisih satu rupiah antara total tersimpan dan penjumlahan komponen yang ditampilkan. Bukti handler dan snapshot sumber tetap dipertahankan sebagai `legacy_v1`.
+
+Pada `accounting_v2`, layanan server menggunakan BCMath, membulatkan **setiap komponen terlebih dahulu**, lalu menjumlahkan komponen tersimpan untuk bruto/potongan dan mengurangkannya untuk bersih. Batas nominal per kolom tetap 18 digit. Grafik menggunakan angka JavaScript hanya untuk visualisasi; angka tabel/rekonsiliasi tetap string desimal.
 
 Kode native memakai operasi floating point/Variant VB6. Tidak ada klaim kesetaraan bit per bit pada nilai ekstrem di luar presisi integer Double; data sumber yang diuji berada di rentang payroll normal. Nilai impor selalu dipertahankan tepat, tanpa melewati floating point.
 
@@ -73,4 +75,16 @@ Kode native memakai operasi floating point/Variant VB6. Tidak ada klaim kesetara
 
 Enter pada textbox lama memicu handler bertahap. Web baru menghitung melalui layanan server yang sama untuk preview dan simpan, dengan tombol Simpan yang eksplisit. Validasi jumlah masuk + izin/alpha + sakit ≤ hari efektif dipertahankan. Nilai historis menjadi default saat edit; pemakaian master saat ini dipilih secara eksplisit.
 
-Laporan rentang menggunakan pasangan tahun-bulan inklusif. Baris rincian adalah transaksi bulanan, subtotal per bagian dan total keseluruhan tetap disertakan. Definisi `.rpt` belum tersedia: grouping internal Crystal Reports lama belum disahkan. Rekap gapok menampilkan penjumlahan empat komponen struktur master, dengan label yang membedakannya dari payroll bulanan.
+Laporan rentang menggunakan pasangan tahun-bulan inklusif. Baris rincian adalah transaksi bulanan, subtotal per bagian dan total keseluruhan tetap disertakan. Definisi `.rpt` belum tersedia: grouping internal Crystal Reports lama belum disahkan. Rekap gapok menjumlahkan gaji pokok + tunjangan jabatan per bulan; tarif harian dan tarif per satuan lembur ditampilkan terpisah tanpa subtotal karena satuannya berbeda.
+
+## Versi kalkulasi dan pelestarian histori
+
+| Perilaku | `legacy_v1` / sumber | `accounting_v2` |
+|---|---|---|
+| Master `p_lain` | Binding native ke `lain1` sebagai penghasilan | Masuk ke `plain` satu kali sebagai potongan |
+| Pembulatan | Total dihitung sebelum konversi SQL masing-masing kolom | Komponen dibulatkan dahulu, kemudian total dihitung |
+| Impor dan buka histori | Nilai sumber tetap utuh | Tidak memicu hitung ulang otomatis |
+| Simpan tanpa perubahan komponen | Nominal dan versi tersimpan dipertahankan | Nominal, versi, dan snapshot tersimpan dipertahankan |
+| Perubahan komponen / pilih master sekarang | Perlu pemeriksaan eksplisit | Menggunakan `accounting_v2`; hasil dan peringatan diperiksa sebelum simpan |
+
+`calculation_snapshot` menyimpan versi kebijakan, periode, kuantitas, sumber tarif, mode, dan pemetaan yang digunakan untuk perhitungan baru. Snapshot tarif historis yang tidak tersedia tidak dibuat-buat dari master sekarang. Audit log menyimpan perubahan dan konteks konfirmasinya. Detail temuan dan pengujian terdapat dalam [AUDIT_PENGGAJIAN.md](AUDIT_PENGGAJIAN.md).
