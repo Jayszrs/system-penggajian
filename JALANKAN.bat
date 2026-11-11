@@ -1,3 +1,7 @@
 @echo off
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start-local.ps1" -OpenBrowser
-if errorlevel 1 pause
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\setup-laragon.ps1" -OpenBrowser
+if errorlevel 1 (
+    pause
+    exit /b 1
+)
+exit /b 0

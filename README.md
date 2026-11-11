@@ -4,9 +4,9 @@ Aplikasi penggajian lokal berbasis PHP MVC, PDO, MySQL 8, Bootstrap 5.3.8, dan C
 
 ## Membuka aplikasi
 
-1. Jalankan Apache dan MySQL pada Laragon.
-2. Buka **http://system-penggajian.test**. Akses melalui **http://localhost/system-penggajian/** juga didukung; rute, aset, dan endpoint API mengikuti folder aplikasi secara otomatis.
-3. Pada penggunaan pertama, buat nama, ID pengguna, dan kata sandi minimal 12 karakter. Aplikasi tidak menyediakan kredensial bawaan.
+1. Klik **Start All** pada Laragon untuk mengaktifkan Apache dan MySQL.
+2. Pada penggunaan pertama atau setelah folder proyek dipindahkan/diubah namanya, klik dua kali **`JALANKAN.bat`** di folder proyek. Launcher menghubungkan `www/system-penggajian` ke folder proyek saat ini dan membuka **http://localhost/system-penggajian/**. Pada penggunaan berikutnya cukup **Start All**, lalu buka alamat tersebut. Tidak perlu menyalin proyek ke folder `www` atau menjalankan server PHP terpisah.
+3. Jika database belum memiliki akun, buat nama, ID pengguna, dan kata sandi minimal 12 karakter. Jika memakai backup SQL, masuk menggunakan akun yang ada dalam backup. Aplikasi tidak menyediakan kredensial bawaan.
 4. Masuk. Periode awal mengikuti transaksi terbaru yang tersedia pada database; tanpa transaksi aplikasi menampilkan keadaan kosong.
 
 Pada instalasi lokal awal, data aplikasi utama sudah dimigrasikan. Repositori publik hanya berisi kode, skema, dan dokumentasi: backup, ekspor database, nominal gaji asli, kredensial, serta hasil QA yang memuat data pribadi tetap disimpan lokal dan tidak disertakan. Instalasi baru perlu melakukan migrasi menggunakan backup milik pengguna. Database `penggajian_test` digunakan khusus pengujian dan tidak menjadi database aplikasi utama.
@@ -37,9 +37,30 @@ Baseline audit serta backup lokal berada di `storage/audit/` dan `storage/export
 
 ### Launcher lokal Windows
 
-Setelah `.env` dan database disiapkan, aktifkan MySQL di Laragon lalu klik dua kali `JALANKAN.bat`. Launcher membuka **http://127.0.0.1:8018** dan menjalankan server PHP di latar belakang. Apache tidak diperlukan untuk alamat ini; akses hanya tersedia dari komputer yang menjalankan launcher.
+Setelah `.env` dan database disiapkan, klik **Start All** di Laragon lalu klik dua kali `JALANKAN.bat`. Launcher memakai Apache Laragon di **http://localhost/system-penggajian/**. Folder proyek boleh tetap berada di Downloads dan boleh memiliki spasi pada namanya. Junction yang terputus akibat perubahan nama folder diperbaiki otomatis; folder biasa atau junction yang masih dipakai proyek lain tidak ditimpa. Launcher tidak mengimpor atau mereset database.
 
-PHP ditemukan dari PATH terminal atau folder `bin/php` Laragon relatif terhadap lokasi proyek. Untuk lokasi PHP lain, jalankan `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-local.ps1 -PhpPath "C:\lokasi\php.exe" -OpenBrowser`. Launcher tidak mengimpor atau mereset database. Setelah komputer dihidupkan ulang, aktifkan MySQL dan klik launcher lagi. Log server tersedia di `storage/php-local.error.log`.
+Laragon ditemukan dari aplikasi Laragon yang sedang berjalan, lokasi proyek di dalam `www`, atau `C:\laragon` / `D:\laragon`. Untuk instalasi di lokasi lain:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-laragon.ps1 -LaragonPath "D:\lokasi\laragon" -OpenBrowser
+```
+
+Setelah komputer dihidupkan ulang, cukup **Start All** di Laragon lalu buka **http://localhost/system-penggajian/**. Alamat **http://system-penggajian.test** juga dapat digunakan setelah fitur Auto Virtual Hosts Laragon diaktifkan dan **Reload** dijalankan.
+
+Jika memakai terminal Laragon (Cmder), jalankan pindah folder dan launcher sebagai **dua perintah terpisah**:
+
+```bat
+cd /d "C:\Users\jaela\Downloads\Project2 Web\penggajianmutiarahikmah"
+JALANKAN.bat
+```
+
+Untuk server PHP terpisah tanpa Apache, skrip lama tetap tersedia. Aktifkan MySQL, lalu jalankan `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-local.ps1 -PhpPath "C:\lokasi\php.exe" -OpenBrowser`. Alamat alternatif ini adalah **http://127.0.0.1:8018**; log server ada di `storage/php-local.error.log`.
+
+### Memakai backup SQL MySQL
+
+Jika memiliki `penggajian.sql`, buat database kosong melalui HeidiSQL/phpMyAdmin di Laragon, lalu impor berkas tersebut ke database itu. Sesuaikan `DB_DATABASE`, `DB_HOST`, `DB_PORT`, `DB_USERNAME`, dan `DB_PASSWORD` pada `.env`. Gunakan database terpisah jika database lama sudah berisi data yang masih diperlukan. Akun dalam backup tetap dipakai; halaman pendaftaran hanya muncul jika belum ada akun.
+
+Jalankan `php scripts/install.php` dari terminal Laragon di folder proyek untuk melengkapi tabel dan metadata yang belum ada setelah impor. Installer tidak mengganti akun atau nominal yang sudah tersimpan. Simpan dump SQL, backup, dan `.env` secara lokal; berkas tersebut tidak perlu diunggah ke GitHub.
 
 ## Migrasi ulang dari backup SQL Server
 
