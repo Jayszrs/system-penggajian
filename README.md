@@ -2,6 +2,40 @@
 
 Aplikasi penggajian lokal berbasis PHP MVC, PDO, MySQL 8, Bootstrap 5.3.8, dan Chart.js 4.5.1. Tampilan mengikuti referensi dashboard pengguna dengan sidebar putih dan aksen hijau bergradasi. Aset antarmuka tersedia lokal tanpa CDN saat aplikasi dijalankan.
 
+## Kerja bersama melalui GitHub dan VS Code
+
+Repo utama tim: **https://github.com/Jayszrs/system-penggajian**. Semua anggota perlu memakai repo ini agar **Sync Changes** mengambil dan mengirim perubahan ke tempat yang sama. Pemilik repo menambahkan anggota melalui **Settings > Collaborators**, kemudian anggota menerima undangannya.
+
+Untuk anggota yang belum memiliki project:
+
+```powershell
+git clone https://github.com/Jayszrs/system-penggajian.git
+cd system-penggajian
+code .
+```
+
+Jika sudah memiliki project dari repo `lakchamana/system-penggajian`, periksa `git remote -v`. Bila `origin` masih menunjuk ke repo tersebut, arahkan ke repo utama lalu ambil informasi branch:
+
+```powershell
+git remote set-url origin https://github.com/Jayszrs/system-penggajian.git
+git fetch origin
+git branch --set-upstream-to=origin/main main
+```
+
+Gunakan branch **main**. Sebelum mulai bekerja, klik **Source Control > Sync Changes** untuk mengambil pembaruan teman. Setelah mengedit, tinjau perubahan, lakukan **Stage Changes**, isi pesan, klik **Commit**, lalu **Sync Changes** untuk mengirimnya. Commit yang belum di-push belum tersedia bagi anggota lain. Jika ada perubahan lokal yang belum siap di-commit, simpan dengan **Stash** sebelum sinkronisasi dan terapkan kembali setelahnya. Jika muncul konflik, selesaikan file yang ditandai, lalu commit dan sinkronkan kembali.
+
+Pengaturan project mengaktifkan `git.autofetch` agar VS Code mengecek pembaruan remote secara berkala. Fetch memperbarui informasi commit; file kerja diperbarui saat **Sync Changes** atau **Pull** dijalankan.
+
+Pada komputer pemilik project ini, repo lama `lakchamana/system-penggajian` tetap tersedia sebagai remote **upstream**. Jika teman masih mengirim perubahan ke repo lama, perubahan tersebut perlu digabungkan secara terpisah dari working tree yang bersih:
+
+```powershell
+git fetch upstream
+git merge upstream/main
+git push origin main
+```
+
+Jika merge menghasilkan konflik, selesaikan dan commit terlebih dahulu sebelum push. Untuk alur cukup **Sync Changes**, semua anggota harus push ke repo utama Jayszrs. Sinkronisasi Git hanya membagikan source code; `.env`, data gaji, dan database lokal tidak ikut disinkronkan.
+
 ## Membuka aplikasi
 
 1. Klik **Start All** pada Laragon untuk mengaktifkan Apache dan MySQL.
