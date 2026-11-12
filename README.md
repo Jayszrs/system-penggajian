@@ -4,20 +4,20 @@ Aplikasi penggajian lokal berbasis PHP MVC, PDO, MySQL 8, Bootstrap 5.3.8, dan C
 
 ## Kerja bersama melalui GitHub dan VS Code
 
-Repo utama tim: **https://github.com/Jayszrs/system-penggajian**. Semua anggota perlu memakai repo ini agar **Sync Changes** mengambil dan mengirim perubahan ke tempat yang sama. Pemilik repo menambahkan anggota melalui **Settings > Collaborators**, kemudian anggota menerima undangannya.
+Repo utama tim: **https://github.com/lakchamana/system-penggajian**. Anggota yang diundang sebagai kolaborator bekerja langsung pada repo ini agar **Sync Changes** mengambil dan mengirim perubahan ke tempat yang sama. Terima undangan GitHub menggunakan akun yang diundang. Repo pribadi anggota tidak otomatis menerima perubahan dari repo tim.
 
 Untuk anggota yang belum memiliki project:
 
 ```powershell
-git clone https://github.com/Jayszrs/system-penggajian.git
+git clone https://github.com/lakchamana/system-penggajian.git
 cd system-penggajian
 code .
 ```
 
-Jika sudah memiliki project dari repo `lakchamana/system-penggajian`, periksa `git remote -v`. Bila `origin` masih menunjuk ke repo tersebut, arahkan ke repo utama lalu ambil informasi branch:
+Jika sudah memiliki project, periksa `git remote -v`. Bila `origin` menunjuk ke repo pribadi, arahkan kembali ke repo tim lalu ambil informasi branch:
 
 ```powershell
-git remote set-url origin https://github.com/Jayszrs/system-penggajian.git
+git remote set-url origin https://github.com/lakchamana/system-penggajian.git
 git fetch origin
 git branch --set-upstream-to=origin/main main
 ```
@@ -26,15 +26,13 @@ Gunakan branch **main**. Sebelum mulai bekerja, klik **Source Control > Sync Cha
 
 Pengaturan project mengaktifkan `git.autofetch` agar VS Code mengecek pembaruan remote secara berkala. Fetch memperbarui informasi commit; file kerja diperbarui saat **Sync Changes** atau **Pull** dijalankan.
 
-Pada komputer pemilik project ini, repo lama `lakchamana/system-penggajian` tetap tersedia sebagai remote **upstream**. Jika teman masih mengirim perubahan ke repo lama, perubahan tersebut perlu digabungkan secara terpisah dari working tree yang bersih:
+Pada komputer ini, remote **origin** menunjuk ke repo tim `lakchamana/system-penggajian`. Remote **personal** menunjuk ke salinan `Jayszrs/system-penggajian`. **Sync Changes** memakai repo tim; jika ingin memperbarui salinan pribadi setelah sinkronisasi, jalankan:
 
 ```powershell
-git fetch upstream
-git merge upstream/main
-git push origin main
+git push personal main
 ```
 
-Jika merge menghasilkan konflik, selesaikan dan commit terlebih dahulu sebelum push. Untuk alur cukup **Sync Changes**, semua anggota harus push ke repo utama Jayszrs. Sinkronisasi Git hanya membagikan source code; `.env`, data gaji, dan database lokal tidak ikut disinkronkan.
+Salinan pribadi bersifat opsional dan tidak perlu digunakan untuk bekerja bersama tim. Sinkronisasi Git hanya membagikan source code; `.env`, data gaji, dan database lokal tidak ikut disinkronkan.
 
 ## Membuka aplikasi
 
